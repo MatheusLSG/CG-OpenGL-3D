@@ -10,10 +10,26 @@
 #include "../lib/objloader.h"
 #include "../lib/main.h"
 using namespace std;
+//Tela
+int window_width = 800;
+int window_height = 500;
+
 
 //Malhas a serem desenhadas
-mesh harry;
-mesh ron; 
+meshes harry;
+int harryIdle = -1;
+
+meshes draco; 
+int dracoActing = 0;
+int dracoWalk = -1;
+int dracoIdle = -1;
+
+
+//Controle do tempo
+//Soh trata maquinas mais rapidas, nao faz animacao relativa ao tempo
+int currentTime = 0;
+int lastTime = 0;
+int updateDrawing = 0;
 
 //Controles gerais
 int zoom = 150;
@@ -36,25 +52,29 @@ void init ()
     glEnable(GL_LIGHTING);  
     glEnable(GL_LIGHT0);
     glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode (GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective (45, (GLfloat)1/(GLfloat)1, 1, 1000);
+    glMatrixMode(GL_MODELVIEW);
     
     //Carrega as meshes dos arquivos
-    ron.loadMesh("resources/RonaldWeasley.obj");
-    harry.loadMesh("resources/HarryPotter.obj");
+    dracoIdle = draco.loadMeshAnim("resources/draco/default/draco####.obj", 1);
+    dracoWalk = draco.loadMeshAnim("resources/draco/dracoWalk/dracoWalk####.obj", 86);
+    
+    draco.drawInit(dracoIdle);
+
+    vector<string> dracoTexturesPaths;
+    dracoTexturesPaths.push_back("resources/draco/texture/dracoTex1.bmp");
+    dracoTexturesPaths.push_back("resources/draco/texture/dracoTex0.bmp");
+    dracoTexturesPaths.push_back("resources/draco/texture/dracoTex2.bmp");
+
+    if( !draco.loadTexture(dracoTexturesPaths) ) exit(printf("Lista de texturas invalidas!\n"));
+    
+    //harry.loadMeshAnim("resources/harry/Default/harry.obj", 1);
 }
 
-void reshape (int w, int h)
-{
-    //Ajusta o tamanho da tela com a janela de visualizacao
-    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
-    glMatrixMode (GL_PROJECTION);
-    glLoadIdentity();
-    if (w <= h)
-        gluPerspective (45, (GLfloat)h/(GLfloat)w, 1, 1000);
-    else
-        gluPerspective (45, (GLfloat)w/(GLfloat)h, 1, 1000);
-    glMatrixMode(GL_MODELVIEW);
-    glutPostRedisplay();
-}
+
 
 
 void DrawAxes(double size)
@@ -102,35 +122,76 @@ void DrawAxes(double size)
 void desenhaJogador(){
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
-        //Translada para o centro do harry para facilitar a rotacao da camera
-        glTranslatef(0,-50,0);
+    //INICIO
+    //Translada para o centro do personagem para facilitar a rotacao da camera
+        glTranslatef(0,-40,0);
 
-        if (flag_swap){
-            glPushMatrix();
-            glScalef(0.5,0.5,0.5);
-            
-            harry.draw();
-
-            glPopMatrix();
-            
-        } else {
-            glPushMatrix();
-            glScalef(0.5,0.5,0.5);
-            
-            ron.draw();
-            
-            glPopMatrix();
-
-            
-        }
+        // ViewportHarry
+        glViewport(0, 0, window_width/2, window_height);
+        glPushMatrix();
         
-        if (coordsysToggle == 1)
-            DrawAxes(10);
+        //DesenhoMundo
+
+            //harry.draw(0, 0);
+            
+            glTranslatef(0, 0, 100);
+            glRotatef(180, 0,1,0);
+
+            //desenhar draco
+            draco.drawCurrent();
+
+            if (coordsysToggle == 1)  DrawAxes(83);
+    
+        glPopMatrix();
+            
+        // ViewportDraco
+        glViewport(window_width/2, 0, window_width/2, window_height);
+        
+        glPushMatrix();
+
+            //camera
+            glTranslatef(0, 0, 100);
+            glRotatef(180, 0,1,0);
+
+            //DesenhoMundo
+            //harry.draw(0,0);
+            
+            glTranslatef(0, 0, 100);
+            glRotatef(180, 0,1,0);
+            
+                //Desanha draco
+            
+            if (!dracoActing)
+            {
+                draco.drawInit(dracoWalk);
+                dracoActing = 1;
+            }
+
+            int rtn = draco.drawNext();
+            
+            if (rtn){
+                draco.drawInit(dracoWalk);
+                dracoActing = 0;
+            }
+            
+            if (coordsysToggle == 1) DrawAxes(85);
+
+        glPopMatrix();
+        
+    //FIM
+
     glPopMatrix();
 }
 
 void display(void)
 {
+    if (updateDrawing){
+        updateDrawing = 0;
+    } else{
+        return;
+    }
+    
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     //Controla camera
@@ -225,16 +286,32 @@ void mouse_motion(int x, int y)
     glutPostRedisplay();
 }
 
+void idle()
+{
+    
+    // Elapsed time from the initiation of the game.
+    currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+    int fatorTempo = 20;
+    if (currentTime - lastTime > fatorTempo){
+        lastTime = currentTime;
+        updateDrawing = 1;
+    }
+    
+
+    glutPostRedisplay();
+}
+
 int main(int argc, char** argv)
 {
     glutInit(&argc, argv);
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize (700,700);
+    glutInitWindowSize (window_width,window_height);
     glutInitWindowPosition (0, 0);
     glutCreateWindow ("Jogo 3D");
     init();
+    glutIdleFunc(idle);
     glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
     glutKeyboardFunc(keyPress);
     glutMotionFunc(mouse_motion);
     glutMouseFunc(mouse);

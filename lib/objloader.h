@@ -28,6 +28,7 @@ typedef struct VERTICE_STRIP{
     pos vPos;
     norm vNorm;
     tex vTex;
+    int idx;
 } verticeStrip;
 
 class mesh{
@@ -37,8 +38,38 @@ class mesh{
     vector<norm> vertsNorm; //Lista de normais dos vertices (original do OBJ)   
     vector<tex> vertsTex; //Lista de coor de textura dos vertices (original do OBJ)   
     vector<verticeStrip> vertsS;//Lista ordenada de vertices das faces para o desenho do modelo via trangle strip
-    mesh(){};
+    mesh(){
+    };
     bool loadMesh(string path);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
-    void draw();
+    void draw(GLuint* textIDs);
+};
+
+class meshes{
+	
+    public:
+    //Variaveis de textura
+    GLuint* texIDs;
+    char* texPixels;
+    int texWidth;
+    int texHeight;
+    //Variaveis das meshes dos movimentos
+    vector<vector<mesh>> vecMeshes;
+    int currentMovID;
+    int currentFrame;
+    meshes(){
+        texIDs = NULL;
+        currentMovID = -1;
+        currentFrame = -1;
+        vecMeshes.clear();
+    };
+    ~meshes(){
+    };
+    //
+    int loadMeshAnim(string path, int qtd);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
+    bool loadTexture(vector<string> path);//Path é o caminho para o arquivo .png e deve conter o nome do arquivo.png
+    void draw(int movID, int frameId);
+    void drawInit(int movID);
+    void drawCurrent();
+    bool drawNext();
 };
 #endif
