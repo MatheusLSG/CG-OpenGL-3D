@@ -5,13 +5,13 @@
 #include <GL/gl.h> 
 #include "../lib/vec3.h"
 
-class Obstaculo
+class Obstaculo3d
 { 
     vec3 obstaculo_pos;
     GLfloat obstaculo_raio;
     cor  obstaculo_cor;
 public: 
-    Obstaculo(vec3 pos_ini, GLfloat raio, cor cor) :
+    Obstaculo3d(vec3 pos_ini, GLfloat raio, cor cor) :
         obstaculo_pos   {pos_ini},
         obstaculo_raio  {raio},
         obstaculo_cor   {cor}

@@ -46,7 +46,7 @@ public:
     bool valido(GLfloat t_dif);
     
     bool verifica_colisao_jogador(Jogador3d& jogador);
-    bool verifica_colisao_obstaculos(const std::list<Obstaculo>& obstaculos);
+    bool verifica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos);
     bool verifica_colisao_arena();
 };
 

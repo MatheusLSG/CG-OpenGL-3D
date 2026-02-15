@@ -5,6 +5,11 @@
 #include <GL/gl.h>
 
 vec3 translacao3D(GLfloat dx, GLfloat dy, GLfloat dz, vec3 ponto);
-vec3 rotacao3D(GLfloat ang, vec3 ponto);
+
+vec3 rotacao3Dx(GLfloat ang, vec3 ponto);
+
+vec3 rotacao3Dy(GLfloat ang, vec3 ponto);
+
+vec3 rotacao3Dz(GLfloat ang, vec3 ponto);
 
 #endif // _TRANSFORM_H_

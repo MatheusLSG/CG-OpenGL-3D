@@ -71,6 +71,6 @@ class meshes{
     void draw(int movID, int frameId);
     void drawInit(int movID);
     void drawCurrent();
-    bool drawNext();
+    bool next();
 };
 #endif

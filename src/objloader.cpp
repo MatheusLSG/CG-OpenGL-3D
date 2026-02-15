@@ -17,8 +17,7 @@ void meshes::drawInit(int movID){
 }
 
 //Desenha a proxima frame do movimento atual e retorna se ja chegou no final
-bool meshes::drawNext(){
-    this->draw(this->currentMovID, this->currentFrame);
+bool meshes::next(){
     this->currentFrame++;
     
     return (this->currentFrame >= this->vecMeshes[this->currentMovID].size());

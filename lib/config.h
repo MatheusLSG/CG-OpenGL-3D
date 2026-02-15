@@ -52,6 +52,17 @@
 
 #define PONTOS_POR_ELIPSE 100
 
+// animacao
+
+enum Estado{
+    PARADO,
+    ANDANDO,
+    CORRENDO,
+    PULANDO,
+    CAINDO,
+    ATACANDO
+};
+
 // extras
 
 #define PERMITE_COLISAO_ENTRE_TIROS false

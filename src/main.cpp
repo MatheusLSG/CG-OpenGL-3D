@@ -7,26 +7,81 @@
 #include <math.h>
 #include <cstring>
 #include <stdlib.h>
+#include <list>
+
+#include "../lib/tinyxml2.h"
+using namespace tinyxml2;
+
 #include "../lib/objloader.h"
 #include "../lib/main.h"
-using namespace std;
-//Tela
-int window_width = 800;
-int window_height = 500;
 
+#include "../lib/tiro3d.h"
+#include "../lib/jogador3d.h"
+#include "../lib/obstaculo3d.h"
+
+
+// VARIAVEIS GLOBAIS
+
+// dados iniciais
+
+GLfloat j1_r = 0;
+GLfloat j1_x = 0;
+GLfloat j1_y = 0;
+
+GLfloat j2_r = 0;
+GLfloat j2_x = 0;
+GLfloat j2_y = 0;
+
+GLfloat arena_r = 0;
+GLfloat arena_x = 0;
+GLfloat arena_y = 0;
+
+std::list<vec3> dados_obstaculos;
+
+// arena
+
+char *arquivo_arena;
+
+// teclas
+int teclas[512];
+
+// mouse
+GLfloat mouse_pass = 0;
+GLfloat mouse_mov = 0;
+
+int mouse_esquerda = 0;
+
+// dimensao da janela
+const GLint janela_largura = JANELA_LARGURA;
+const GLint janela_altura = JANELA_ALTURA;
+
+// texto
+static char str[2000];
+void * fonte = TEXTO_FONTE;
+
+// jogadores
+
+Jogador3d jHarry;
+Jogador3d jDraco;
+
+// obstaculos
+
+std::list<Obstaculo3d> obstaculos;
+
+// flags
+
+bool flag_col_tiros = PERMITE_COLISAO_ENTRE_TIROS;
+int flag_ganhador = 0;
+
+
+// OLD:
 
 //Malhas a serem desenhadas
 meshes harry;
 int harryIdle = -1;
 
-meshes draco; 
-int dracoActing = 0;
-int dracoIdle = -1;
-int dracoWalk = -1;
-int dracoRun = -1;
-int dracoJump = -1;
 
-int dracoState = -1;
+
 
 //Controle do tempo
 //Soh trata maquinas mais rapidas, nao faz animacao relativa ao tempo
@@ -49,8 +104,79 @@ int flag_swap = 1;
 
 GLfloat light_pos[3] = {0, 0 ,0};
 
-void init ()
+
+// DEFINICAO DE FUNCOES ----------------------------------------------------------------------
+
+void inicializacao();
+void renderiza_cena();
+void idle();
+
+void reinicia_teclas();
+void reinicia_flags();
+
+void pressionar_teclas(unsigned char tecla, int x, int y);
+void soltar_teclas(unsigned char tecla, int x, int y);
+
+void mouse_press(int botao, int estado, int x, int y);
+void mouse_move(int x, int y);
+
+void coleta_dados_arena();
+
+void idle_jogador_1(GLdouble t_dif);
+void idle_jogador_2(GLdouble t_dif);
+void idle_tiros(std::list<Tiro3d*>& tiros_aliado, std::list<Tiro3d*>& tiros_inimigo, Jogador3d& inimigo, GLdouble t_dif);
+
+void renderiza_texto_direita(vec3 pos, cor cor_texto, char *texto);
+void renderiza_texto_esquerda(vec3 pos, cor cor_texto, char *texto);
+void renderiza_texto_centro(vec3 pos, cor cor_texto, char *texto);
+
+//OLD
+void mouse(int button, int state, int x, int y);
+void mouse_motion(int x, int y);
+void display();
+void keyPress(unsigned char key, int x, int y);
+
+// MAIN --------------------------------------------------------------------------------------
+
+int main(int argc, char *argv[])
 {
+    if (argc < 2 && 0)
+    {
+        std::cerr << "erro: numero de argumento invalido!\n";
+        return 1;
+    }
+
+    //arquivo_arena = argv[1];
+    
+    // glut
+    glutInit(&argc, argv);
+    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    
+    // Cria a janela
+    glutInitWindowSize(janela_largura, janela_altura);
+    glutInitWindowPosition(150,50);
+    glutCreateWindow ("Jogo 3D");
+ 
+    // Alocacao das callbacks
+    /*
+    glutDisplayFunc(renderiza_cena);
+    glutKeyboardFunc(pressionar_teclas);
+    glutIdleFunc(idle);
+    glutKeyboardUpFunc(soltar_teclas);
+    glutMouseFunc(mouse_press);
+    glutPassiveMotionFunc(mouse_move);
+    glutMotionFunc(mouse_move);
+    */
+
+    glutIdleFunc(idle);
+    glutDisplayFunc(display);
+    glutMotionFunc(mouse_motion);
+    glutMouseFunc(mouse);
+    glutKeyboardFunc(keyPress);
+
+    // inicializa cena
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
+    
     glShadeModel (GL_SMOOTH);
     glEnable(GL_LIGHTING);  
     glEnable(GL_LIGHT0);
@@ -60,12 +186,41 @@ void init ()
         glLoadIdentity();
         gluPerspective (45, (GLfloat)1/(GLfloat)1, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
+
+    glLoadIdentity();
+
+    // Inicializa jogo
+    inicializacao();
     
-    //Carrega as meshes dos arquivos
-    dracoIdle = draco.loadMeshAnim("resources/draco/dracoIdle/dracoIdle####.obj", 383, 1);
-    dracoWalk = draco.loadMeshAnim("resources/draco/dracoWalk/dracoWalk####.obj", 86, 1);
     
-    draco.drawInit(dracoIdle);
+    // Loop principal
+    glutMainLoop();
+    
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+void inicializacao ()
+{
+    meshes draco;
+    
+    draco.loadMeshAnim("resources/draco/dracoIdle/dracoIdle####.obj", 383, 1);
+    draco.loadMeshAnim("resources/draco/dracoWalk/dracoWalk####.obj", 86, 1);
+    draco.loadMeshAnim("resources/draco/dracoRun/dracoRun####.obj", 42, 1);
+    draco.loadMeshAnim("resources/draco/dracoJump/dracoJump####.obj", 51, 1);
+    draco.loadMeshAnim("resources/draco/dracoFall/dracoFall####.obj", 107, 1);
+    draco.loadMeshAnim("resources/draco/dracoAtk/dracoAtk####.obj", 139, 1);
+    draco.drawInit(PARADO);
 
     vector<string> dracoTexturesPaths;
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex0.bmp");
@@ -74,6 +229,15 @@ void init ()
 
     if( !draco.loadTexture(dracoTexturesPaths) ) exit(printf("Lista de texturas invalidas!\n"));
     
+    jDraco = Jogador3d(
+        10,
+        180,
+        vec3(0,0,0),
+        VERDE,
+        draco
+    );
+
+
     //harry.loadMeshAnim("resources/harry/Default/harry.obj", 1);
 }
 
@@ -123,65 +287,50 @@ void DrawAxes(double size)
 }
 
 void desenhaJogador(){
+    
+
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     //INICIO
     //Translada para o centro do personagem para facilitar a rotacao da camera
         glTranslatef(0,-40,0);
 
-        //Escolhe entre iniciar o desenho do chute ou soco
-        if (lookatToggle && dracoState != dracoWalk){
-            draco.drawInit(dracoWalk);
-            dracoState = dracoWalk;
-        } else if (armaToggle && dracoState != dracoRun){
-            draco.drawInit(dracoRun);
-            dracoState = dracoRun;
-        } else if (transformacaoArmaToggle && dracoState != dracoJump){
-            draco.drawInit(dracoJump);
-            dracoState = dracoJump;
-        }
-
 
         // ViewportHarry
-        glViewport(0, 0, window_width/2, window_height);
+        glViewport(0, 0, janela_largura/2, janela_altura);
         glPushMatrix();
-        
-        //DesenhoMundo
+                
+            //camera
+            glTranslatef(0, 0, -25);
+            
+            //Desenho Mundo
 
             //harry.draw(0, 0);
             
-            glTranslatef(0, 0, 100);
-            glRotatef(180, 0,1,0);
-
+          
             //desenhar draco
-            draco.drawCurrent();
+
+            jDraco.desenha_jogador();
 
             if (coordsysToggle == 1)  DrawAxes(83);
     
         glPopMatrix();
             
         // ViewportDraco
-        glViewport(window_width/2, 0, window_width/2, window_height);
+        glViewport(janela_largura/2, 0, janela_largura/2, janela_altura);
         
         glPushMatrix();
 
             //camera
-            glTranslatef(0, 0, 100);
+            glTranslatef(0, 0, 25);
             glRotatef(180, 0,1,0);
 
             //DesenhoMundo
             //harry.draw(0,0);
             
-            glTranslatef(0, 0, 100);
-            glRotatef(180, 0,1,0);
+
+            jDraco.desenha_jogador();
             
-                //Desanha draco
-            int rtn = draco.drawNext();
-            
-            if (rtn){
-                draco.drawInit(dracoIdle);
-                dracoState = -1;
-            }
             
             if (coordsysToggle == 1) DrawAxes(85);
 
@@ -200,6 +349,7 @@ void display(void)
         return;
     }
     
+    jDraco.atualiza_animacao();
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -241,10 +391,22 @@ void keyPress(unsigned char key, int x, int y)
 {
     switch(key){
     case '1':
-        transformacaoArmaToggle = 1;
+        jDraco.para();
         break;
     case '2':
-        transformacaoArmaToggle = 2;
+        jDraco.move(1);
+        break;
+    case '3':
+        jDraco.pula();
+        break;
+    case '4':
+        jDraco.atira();
+        break;
+    case '5':
+
+        break;
+    case '6':
+
         break;
     case 'a':
         armaToggle = !armaToggle;
@@ -297,7 +459,6 @@ void mouse_motion(int x, int y)
 
 void idle()
 {
-    
     // Elapsed time from the initiation of the game.
     currentTime = glutGet(GLUT_ELAPSED_TIME);
 
@@ -307,23 +468,22 @@ void idle()
         updateDrawing = 1;
     }
     
-
     glutPostRedisplay();
 }
-
+/*
 int main(int argc, char** argv)
 {
     glutInit(&argc, argv);
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize (window_width,window_height);
+    glutInitWindowSize (janela_largura,janela_altura);
     glutInitWindowPosition (0, 0);
     glutCreateWindow ("Jogo 3D");
     init();
     glutIdleFunc(idle);
     glutDisplayFunc(display);
-    glutKeyboardFunc(keyPress);
     glutMotionFunc(mouse_motion);
     glutMouseFunc(mouse);
     glutMainLoop();
     return 0;
 }
+*/

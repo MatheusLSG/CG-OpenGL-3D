@@ -13,38 +13,47 @@
 // momento confia
 class Tiro;
 
-
 class Jogador3d
 { 
     GLint   jogador_vida;
-    GLint   jogador_flag_andando;
-    GLfloat jogador_tempo_andando;
     GLfloat jogador_raio;
 
     vec3    jogador_pos;
     vec3    jogador_dir;
+    GLfloat Jogador_theta;
     
-    cor     jogador_tiro_cor;  
-    
-    mesh    jogador_mesh;
+    meshes  jogador_modelo;
+    Estado  jogador_estado_atual;
+    Estado  jogador_anim_atual;
 
-    GLfloat hit_box;
+    vec3    jogador_arma_pos;
+    vec3    jogador_arma_dir;
+    GLfloat jogador_arma_tetha;
+    GLfloat jogador_arma_phi;
+
+    cor     jogador_tiro_cor;  
     
     std::list<Tiro*> tiros;
 
 public:
-    Jogador3d(GLfloat ini_cabeca_raio, 
-            vec3 ini_jogador_pos, 
-            GLfloat ini_jogador_ang, 
-            cor ini_jogador_corpo_cor, 
-            cor ini_jogador_tiro_cor) :
+    Jogador3d() {};
+    Jogador3d(  GLfloat ini_jogador_raio,
+                GLfloat ini_jogador_theta, 
+                vec3 ini_jogador_pos,
+                cor ini_jogador_tiro_cor,
+                meshes animacoes) :
         jogador_vida            {VIDAS_INICIAL},
-        jogador_flag_andando    {0},
-        jogador_tempo_andando   {0},
+        jogador_raio            {ini_jogador_raio},
         jogador_pos             {ini_jogador_pos},
-        jogador_dir             {},
+        jogador_dir             {rotacao3Dz(ini_jogador_theta, vec3(1,0,0))},
+        Jogador_theta           {},
+        jogador_modelo          {animacoes},
+        jogador_anim_atual      {PARADO},
+        jogador_arma_pos        {ini_jogador_pos},
+        jogador_arma_dir        {},
+        jogador_arma_tetha      {},
+        jogador_arma_phi        {},
         jogador_tiro_cor        {ini_jogador_tiro_cor},
-       
         tiros                   {std::list<Tiro*>()}
     {};
 
@@ -55,18 +64,20 @@ public:
     GLfloat raio() const {return jogador_raio;};
     GLint vidas() const {return jogador_vida;};
     
-
     std::list<Tiro*> &retorna_tiros() {return tiros;};
 
-    void desenha_corpo();
+    void atualiza_animacao();
+    void desenha_jogador();
     void desenha_tiros();
-    void move(GLfloat t_dif);
+    void move(GLfloat s_dif);
     void para();
-    void gira_corpo(GLfloat t_dif);
-    void gira_braco(GLfloat t_dif);
+    void pula();
+    void gravidade(GLfloat t_dif);
+    void gira_corpo(GLfloat theta_dif);
+    void gira_arma(GLfloat theta_dif, GLfloat phi_dif);
     void atira();
     bool verifica_colisao_inimigo(const Jogador3d& inimigo);
-    bool verifica_colisao_obstaculos(const std::list<Obstaculo>& obstaculos);
+    bool verifica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos);
     bool verifica_colisao_arena();
     
     void dano();
