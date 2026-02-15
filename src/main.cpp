@@ -21,9 +21,12 @@ int harryIdle = -1;
 
 meshes draco; 
 int dracoActing = 0;
-int dracoWalk = -1;
 int dracoIdle = -1;
+int dracoWalk = -1;
+int dracoRun = -1;
+int dracoJump = -1;
 
+int dracoState = -1;
 
 //Controle do tempo
 //Soh trata maquinas mais rapidas, nao faz animacao relativa ao tempo
@@ -33,10 +36,10 @@ int updateDrawing = 0;
 
 //Controles gerais
 int zoom = 150;
-int lookatToggle = 1;
-int transformacaoArmaToggle = 1;
-int armaToggle = 1;
-int coordsysToggle = 1;
+int lookatToggle = 0;
+int transformacaoArmaToggle = 0;
+int armaToggle = 0;
+int coordsysToggle = 0;
 double camXYAngle=0;
 double camXZAngle=0;
 int lastX = 0;
@@ -59,14 +62,14 @@ void init ()
     glMatrixMode(GL_MODELVIEW);
     
     //Carrega as meshes dos arquivos
-    dracoIdle = draco.loadMeshAnim("resources/draco/default/draco####.obj", 1);
-    dracoWalk = draco.loadMeshAnim("resources/draco/dracoWalk/dracoWalk####.obj", 86);
+    dracoIdle = draco.loadMeshAnim("resources/draco/dracoIdle/dracoIdle####.obj", 383, 1);
+    dracoWalk = draco.loadMeshAnim("resources/draco/dracoWalk/dracoWalk####.obj", 86, 1);
     
     draco.drawInit(dracoIdle);
 
     vector<string> dracoTexturesPaths;
-    dracoTexturesPaths.push_back("resources/draco/texture/dracoTex1.bmp");
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex0.bmp");
+    dracoTexturesPaths.push_back("resources/draco/texture/dracoTex1.bmp");
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex2.bmp");
 
     if( !draco.loadTexture(dracoTexturesPaths) ) exit(printf("Lista de texturas invalidas!\n"));
@@ -126,6 +129,19 @@ void desenhaJogador(){
     //Translada para o centro do personagem para facilitar a rotacao da camera
         glTranslatef(0,-40,0);
 
+        //Escolhe entre iniciar o desenho do chute ou soco
+        if (lookatToggle && dracoState != dracoWalk){
+            draco.drawInit(dracoWalk);
+            dracoState = dracoWalk;
+        } else if (armaToggle && dracoState != dracoRun){
+            draco.drawInit(dracoRun);
+            dracoState = dracoRun;
+        } else if (transformacaoArmaToggle && dracoState != dracoJump){
+            draco.drawInit(dracoJump);
+            dracoState = dracoJump;
+        }
+
+
         // ViewportHarry
         glViewport(0, 0, window_width/2, window_height);
         glPushMatrix();
@@ -160,18 +176,11 @@ void desenhaJogador(){
             glRotatef(180, 0,1,0);
             
                 //Desanha draco
-            
-            if (!dracoActing)
-            {
-                draco.drawInit(dracoWalk);
-                dracoActing = 1;
-            }
-
             int rtn = draco.drawNext();
             
             if (rtn){
-                draco.drawInit(dracoWalk);
-                dracoActing = 0;
+                draco.drawInit(dracoIdle);
+                dracoState = -1;
             }
             
             if (coordsysToggle == 1) DrawAxes(85);
@@ -292,7 +301,7 @@ void idle()
     // Elapsed time from the initiation of the game.
     currentTime = glutGet(GLUT_ELAPSED_TIME);
 
-    int fatorTempo = 20;
+    int fatorTempo = 10;
     if (currentTime - lastTime > fatorTempo){
         lastTime = currentTime;
         updateDrawing = 1;

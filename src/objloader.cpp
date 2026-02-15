@@ -30,7 +30,7 @@ void meshes::drawCurrent(){
 }
 
 //Carrega as meshes de um movimento do caminho path e assumindo qtd arquivos
-int meshes::loadMeshAnim(string path, int qtd){
+int meshes::loadMeshAnim(string path, int qtd, int none){
     
     vector<mesh> vec;
     mesh m;
@@ -43,7 +43,7 @@ int meshes::loadMeshAnim(string path, int qtd){
         path.replace(index, 4, str);
         std::cout << path << std::endl; 
         this->vecMeshes[movID].push_back(m);
-        this->vecMeshes[movID][this->vecMeshes[movID].size()-1].loadMesh(path);
+        this->vecMeshes[movID][this->vecMeshes[movID].size()-1].loadMesh(path, none);
     }
     return movID;
     
@@ -97,14 +97,14 @@ bool meshes::loadTexture(vector<string> paths){
 }
 
 //função para carregar o OBJ
-bool mesh::loadMesh(string path){
+bool mesh::loadMesh(string path, int none){
     vector<int> vertIndex, uvIndex, normIndex;//indexadores para vertices, mapeamento de textura e normais
     vertsPos.clear();
     vertsNorm.clear();
     vertsTex.clear();
     vertsS.clear();
     int i = -1;
-    int t_idx = -1;
+    int tIdx = -1;
     int v_util_now = 0;
     FILE* file= fopen(path.data(), "r");
     if(file== NULL){
@@ -133,23 +133,6 @@ bool mesh::loadMesh(string path){
                 fscanf(file, "%f %f %f\n", &vert.x, &vert.y, &vert.z);
                 vertsNorm.push_back(vert);
             }
-            else if(strcmp(lineHeader, "usemtl")==0 || strcmp(lineHeader, "s")==0){
-                for(unsigned int i=v_util_now; i<vertIndex.size(); i++){
-                    verticeStrip vert;
-                    vert.vPos.x = vertsPos[vertIndex[i]-1].x;
-                    vert.vPos.y = vertsPos[vertIndex[i]-1].y;
-                    vert.vPos.z = vertsPos[vertIndex[i]-1].z;
-                    vert.vTex.u = vertsTex[uvIndex[i]-1].u;
-                    vert.vTex.v = vertsTex[uvIndex[i]-1].v;
-                    vert.vNorm.x = vertsNorm[normIndex[i]-1].x;
-                    vert.vNorm.y = vertsNorm[normIndex[i]-1].y;
-                    vert.vNorm.z = vertsNorm[normIndex[i]-1].z;
-                    vert.idx = t_idx;
-                    vertsS.push_back(vert);
-                }
-                v_util_now = vertIndex.size();
-                t_idx++;
-            }
             else if(strcmp(lineHeader, "f")==0){
                 string v1, v2, v3;
                 unsigned int vertInd[3], uvInd[3], normInd[3];
@@ -172,7 +155,35 @@ bool mesh::loadMesh(string path){
                 normIndex.push_back(normInd[1]);
                 normIndex.push_back(normInd[2]);
             }
-            
+            else if(strcmp(lineHeader, "o")==0){
+                if(tIdx != -1)
+                {
+                    for(unsigned int i=v_util_now; i<vertIndex.size(); i++){
+                        verticeStrip vert;
+                        vert.vPos.x = vertsPos[vertIndex[i]-1].x;
+                        vert.vPos.y = vertsPos[vertIndex[i]-1].y;
+                        vert.vPos.z = vertsPos[vertIndex[i]-1].z;
+                        vert.vTex.u = vertsTex[uvIndex[i]-1].u;
+                        vert.vTex.v = vertsTex[uvIndex[i]-1].v;
+                        vert.vNorm.x = vertsNorm[normIndex[i]-1].x;
+                        vert.vNorm.y = vertsNorm[normIndex[i]-1].y;
+                        vert.vNorm.z = vertsNorm[normIndex[i]-1].z;
+                        vert.idx = tIdx;
+                        vertsS.push_back(vert);
+                    }
+                    v_util_now = vertIndex.size();
+                }
+
+                fscanf(file, " %s", lineHeader);
+                if (strcmp(lineHeader, "None") == 0)
+                {
+                    tIdx = none;
+                } 
+                else 
+                {
+                    tIdx = lineHeader[9] - '0';
+                }
+            }
         }
         for(unsigned int i=v_util_now; i<vertIndex.size(); i++){
             verticeStrip vert;
@@ -184,7 +195,7 @@ bool mesh::loadMesh(string path){
             vert.vNorm.x = vertsNorm[normIndex[i]-1].x;
             vert.vNorm.y = vertsNorm[normIndex[i]-1].y;
             vert.vNorm.z = vertsNorm[normIndex[i]-1].z;
-            vert.idx = t_idx;
+            vert.idx = tIdx;
             vertsS.push_back(vert);
         }
         

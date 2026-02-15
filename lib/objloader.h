@@ -38,9 +38,10 @@ class mesh{
     vector<norm> vertsNorm; //Lista de normais dos vertices (original do OBJ)   
     vector<tex> vertsTex; //Lista de coor de textura dos vertices (original do OBJ)   
     vector<verticeStrip> vertsS;//Lista ordenada de vertices das faces para o desenho do modelo via trangle strip
+    vector<int> tIdx; //Lista de idx de texturas
     mesh(){
     };
-    bool loadMesh(string path);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
+    bool loadMesh(string path, int none);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
     void draw(GLuint* textIDs);
 };
 
@@ -65,7 +66,7 @@ class meshes{
     ~meshes(){
     };
     //
-    int loadMeshAnim(string path, int qtd);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
+    int loadMeshAnim(string path, int qtd, int none);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
     bool loadTexture(vector<string> path);//Path é o caminho para o arquivo .png e deve conter o nome do arquivo.png
     void draw(int movID, int frameId);
     void drawInit(int movID);

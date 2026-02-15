@@ -11,9 +11,9 @@
 #include "../lib/config.h"
 
 // momento confia
-class Jogador;
+class Jogador3d;
 
-class Tiro {
+class Tiro3d {
     vec3 tiro_pos_ini; 
     vec3 tiro_pos_atual;
     vec3 tiro_dir;
@@ -21,9 +21,9 @@ class Tiro {
     GLfloat tiro_tempo_atual;
     GLfloat tiro_tempo_limite;
     cor  tiro_cor;
-    Jogador* jogador;
+    Jogador3d* jogador;
 public:
-    Tiro(vec3 pos_ini, GLfloat ang, GLfloat raio, cor cor, Jogador* jogador) :
+    Tiro3d(vec3 pos_ini, GLfloat ang, GLfloat raio, cor cor, Jogador3d* jogador) :
         tiro_pos_ini        {pos_ini}, 
         tiro_pos_atual      {pos_ini},
         tiro_dir            {},
@@ -45,7 +45,7 @@ public:
     
     bool valido(GLfloat t_dif);
     
-    bool verifica_colisao_jogador(Jogador& jogador);
+    bool verifica_colisao_jogador(Jogador3d& jogador);
     bool verifica_colisao_obstaculos(const std::list<Obstaculo>& obstaculos);
     bool verifica_colisao_arena();
 };

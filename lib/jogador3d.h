@@ -14,7 +14,7 @@
 class Tiro;
 
 
-class Jogador
+class Jogador3d
 { 
     GLint   jogador_vida;
     GLint   jogador_flag_andando;
@@ -33,7 +33,7 @@ class Jogador
     std::list<Tiro*> tiros;
 
 public:
-    Jogador(GLfloat ini_cabeca_raio, 
+    Jogador3d(GLfloat ini_cabeca_raio, 
             vec3 ini_jogador_pos, 
             GLfloat ini_jogador_ang, 
             cor ini_jogador_corpo_cor, 
@@ -65,7 +65,7 @@ public:
     void gira_corpo(GLfloat t_dif);
     void gira_braco(GLfloat t_dif);
     void atira();
-    bool verifica_colisao_inimigo(const Jogador& inimigo);
+    bool verifica_colisao_inimigo(const Jogador3d& inimigo);
     bool verifica_colisao_obstaculos(const std::list<Obstaculo>& obstaculos);
     bool verifica_colisao_arena();
     

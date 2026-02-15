@@ -18,7 +18,7 @@
 
 
 // jogo
-#define  JANELA_LARGURA    (GLint) 500
+#define  JANELA_LARGURA    (GLint) 800
 #define  JANELA_ALTURA     (GLint) 500
 
 #define  VIEWPORT_LARGURA  (GLint) 500
