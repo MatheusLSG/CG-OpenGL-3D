@@ -214,14 +214,16 @@ void inicializacao ()
 {
     meshes draco;
     
-    draco.loadMeshAnim("resources/draco/dracoIdle/dracoIdle####.obj", 383, 1);
-    draco.loadMeshAnim("resources/draco/dracoWalk/dracoWalk####.obj", 86, 1);
-    draco.loadMeshAnim("resources/draco/dracoRun/dracoRun####.obj", 42, 1);
-    draco.loadMeshAnim("resources/draco/dracoJump/dracoJump####.obj", 51, 1);
-    draco.loadMeshAnim("resources/draco/dracoFall/dracoFall####.obj", 107, 1);
-    draco.loadMeshAnim("resources/draco/dracoAtk/dracoAtk####.obj", 139, 1);
+    draco.loadMeshAnim("resources/draco/idle/idle####.obj", 192, 1);
+    draco.loadMeshAnim("resources/draco/walkforw/walkforw####.obj", 34, 1);
+    draco.loadMeshAnim("resources/draco/walkback/walkback####.obj", 36, 1);
+    draco.loadMeshAnim("resources/draco/runforw/runforw####.obj", 21, 1);
+    draco.loadMeshAnim("resources/draco/runback/runback####.obj", 21, 1);
+    draco.loadMeshAnim("resources/draco/jump/jump####.obj", 26, 1);
+    draco.loadMeshAnim("resources/draco/fall/fall####.obj", 33, 1);
+    draco.loadMeshAnim("resources/draco/atack/atack####.obj", 74, 1);
     draco.drawInit(PARADO);
-
+     
     vector<string> dracoTexturesPaths;
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex0.bmp");
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex1.bmp");
@@ -397,16 +399,19 @@ void keyPress(unsigned char key, int x, int y)
         jDraco.move(1);
         break;
     case '3':
-        jDraco.pula();
+        jDraco.move(2);
         break;
     case '4':
-        jDraco.atira();
+        jDraco.move(-1);
         break;
     case '5':
-
+        jDraco.move(-2);
         break;
     case '6':
-
+        jDraco.pula();
+        break;
+    case '7':
+        jDraco.atira();
         break;
     case 'a':
         armaToggle = !armaToggle;
@@ -462,7 +467,7 @@ void idle()
     // Elapsed time from the initiation of the game.
     currentTime = glutGet(GLUT_ELAPSED_TIME);
 
-    int fatorTempo = 10;
+    int fatorTempo = 20;
     if (currentTime - lastTime > fatorTempo){
         lastTime = currentTime;
         updateDrawing = 1;

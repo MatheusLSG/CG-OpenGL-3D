@@ -31,13 +31,23 @@ void Jogador3d::atualiza_animacao()
             jogador_anim_atual = jogador_estado_atual;
             break;
             
-        case ANDANDO:
-            jogador_modelo.drawInit(ANDANDO);
+        case ANDANDOFRENTE:
+            jogador_modelo.drawInit(ANDANDOFRENTE);
             jogador_anim_atual = jogador_estado_atual;
             break;
             
-        case CORRENDO:
-            jogador_modelo.drawInit(CORRENDO);
+        case ANDANDOTRAS:
+            jogador_modelo.drawInit(ANDANDOTRAS);
+            jogador_anim_atual = jogador_estado_atual;
+            break;
+        
+        case CORRENDOFRENTE:
+            jogador_modelo.drawInit(CORRENDOFRENTE);
+            jogador_anim_atual = jogador_estado_atual;
+            break;
+        
+        case CORRENDOTRAS:
+            jogador_modelo.drawInit(CORRENDOTRAS);
             jogador_anim_atual = jogador_estado_atual;
             break;
             
@@ -84,7 +94,28 @@ void Jogador3d::desenha_tiros()
 
 void Jogador3d::move(GLfloat s_dif)
 {
-    jogador_estado_atual = CORRENDO;
+    
+    if (s_dif == 1)
+    {
+        jogador_estado_atual = ANDANDOFRENTE;
+    }
+
+    if (s_dif == 2)
+    {
+        jogador_estado_atual = CORRENDOFRENTE;
+    }
+
+    if (s_dif == -1)
+    {
+        jogador_estado_atual = ANDANDOTRAS;
+    }
+
+    if (s_dif == -2)
+    {
+        jogador_estado_atual = CORRENDOTRAS;
+    }
+
+    
 }
 
 void Jogador3d::para()
