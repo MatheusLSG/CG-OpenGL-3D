@@ -42,7 +42,6 @@ void Obstaculo3d::desenha()
     if (desenha_tampa_superior) {
         glTranslatef(0.0f, 0.0f, obstaculo_altura);
         glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
-        // Teto com a mesma cor do obstáculo (arena = azul como o chão, pilastras = preto)
         glColor3f(obstaculo_cor.x(), obstaculo_cor.y(), obstaculo_cor.z());
         GLfloat mat[4] = { obstaculo_cor.x(), obstaculo_cor.y(), obstaculo_cor.z(), 1.0f };
         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
