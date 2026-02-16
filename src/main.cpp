@@ -692,7 +692,7 @@ void idle()
     // Elapsed time from the initiation of the game.
     currentTime = glutGet(GLUT_ELAPSED_TIME);
 
-    int fatorTempo = 20;
+    int fatorTempo = 33;
     if (currentTime - lastTime > fatorTempo){
         lastTime = currentTime;
         updateDrawing = 1;
