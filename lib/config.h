@@ -68,7 +68,10 @@ enum Estado{
     CORRENDOTRAS,
     PULANDO,
     CAINDO,
-    ATACANDO
+    ATACANDO,
+    DANO,
+    GANHAR,
+    PERDER
 };
 
 #define PERMITE_COLISAO_ENTRE_TIROS false

@@ -252,7 +252,11 @@ void inicializacao ()
     draco.loadMeshAnim("resources/draco/jump/jump####.obj", 26, 1);
     draco.loadMeshAnim("resources/draco/fall/fall####.obj", 33, 1);
     draco.loadMeshAnim("resources/draco/atack/atack####.obj", 74, 1);
+    draco.loadMeshAnim("resources/draco/damage/damage####.obj", 31, 1);
+    draco.loadMeshAnim("resources/draco/win/win####.obj", 374, 1);
+    draco.loadMeshAnim("resources/draco/lose/lose####.obj", 96, 1);
     draco.drawInit(PARADO);
+    
      
     vector<string> dracoTexturesPaths;
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex0.bmp");
@@ -286,6 +290,9 @@ void inicializacao ()
     harry.loadMeshAnim("resources/harry/jump/jump####.obj", 26, 1);
     harry.loadMeshAnim("resources/harry/fall/fall####.obj", 33, 1);
     harry.loadMeshAnim("resources/harry/atack/atack####.obj", 74, 1);
+    harry.loadMeshAnim("resources/harry/damage/damage####.obj", 31, 1);
+    harry.loadMeshAnim("resources/harry/win/win####.obj", 374, 1);
+    harry.loadMeshAnim("resources/harry/lose/lose####.obj", 96, 1);
     harry.drawInit(PARADO);
      
     
@@ -607,6 +614,11 @@ void keyPress(unsigned char key, int x, int y)
         if (jDraco.vidas() > 0 && controladorJogo.getEstado() == EM_PARTIDA) {
             int vidasAntes = jDraco.vidas();
             jDraco.dano();
+            if (vidasAntes == 1)
+            {
+                jHarry.ganha();
+            }
+
             placar.notificarDanoDireita(vidasAntes);
         }
         break;
@@ -614,6 +626,11 @@ void keyPress(unsigned char key, int x, int y)
         if (jHarry.vidas() > 0 && controladorJogo.getEstado() == EM_PARTIDA) {
             int vidasAntes = jHarry.vidas();
             jHarry.dano();
+            if (vidasAntes == 1)
+            {
+                jDraco.ganha();
+            }
+            
             placar.notificarDanoEsquerda(vidasAntes);
         }
         break;

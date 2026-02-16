@@ -21,7 +21,7 @@ void meshes::drawInit(int movID){
 bool meshes::next(){
     this->currentFrame++;
     
-    return (this->currentFrame >= this->vecMeshes[this->currentMovID].size());
+    return (this->currentFrame >= this->vecMeshes[this->currentMovID].size()-1);
 }
 
 //Desenha a frame atual

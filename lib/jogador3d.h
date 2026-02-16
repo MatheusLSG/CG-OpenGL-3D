@@ -36,6 +36,9 @@ class Jogador3d
 
     cor     jogador_tiro_cor;
 
+    int     jogador_flag_anim;
+    int     jogador_inv;
+
     std::list<Tiro*> tiros;
 
 public:
@@ -45,24 +48,28 @@ public:
               vec3 ini_jogador_pos,
               cor ini_jogador_tiro_cor,
               meshes animacoes) :
-        jogador_vida       {VIDAS_INICIAL},
-        jogador_raio       {ini_jogador_raio},
-        jogador_pos        {ini_jogador_pos},
-        jogador_dir        {rotacao3Dz(ini_jogador_theta, vec3(1,0,0))},
-        Jogador_theta      {ini_jogador_theta},
-        jogador_modelo     {animacoes},
-        jogador_anim_atual {PARADO},
-        jogador_arma_pos   {ini_jogador_pos},
-        jogador_arma_dir   {},
-        jogador_arma_tetha {},
-        jogador_arma_phi   {},
-        jogador_tiro_cor   {ini_jogador_tiro_cor},
-        tiros              {std::list<Tiro*>()}
+        jogador_vida        {VIDAS_INICIAL},
+        jogador_raio        {ini_jogador_raio},
+        jogador_pos         {ini_jogador_pos},
+        jogador_dir         {rotacao3Dz(ini_jogador_theta, vec3(1,0,0))},
+        Jogador_theta       {ini_jogador_theta},
+        jogador_modelo      {animacoes},
+        jogador_estado_atual{PARADO},
+        jogador_anim_atual  {PARADO},
+        jogador_arma_pos    {ini_jogador_pos},
+        jogador_arma_dir    {},
+        jogador_arma_tetha  {},
+        jogador_arma_phi    {},
+        jogador_tiro_cor    {ini_jogador_tiro_cor},
+        jogador_flag_anim   {1},
+        jogador_inv         {0},
+        tiros               {std::list<Tiro*>()}
     {}
 
-    GLfloat pos_x() const { return jogador_pos.x(); }
-    GLfloat pos_y() const { return jogador_pos.y(); }
-    GLfloat pos_z() const { return jogador_pos.z(); }
+    GLfloat pos_x() const   { return jogador_pos.x(); }
+    GLfloat pos_y() const   { return jogador_pos.y(); }
+    GLfloat pos_z() const   { return jogador_pos.z(); }
+    void    ganha()         { jogador_estado_atual = GANHAR;  jogador_inv = 1;}
     /**
      * @brief Posição 3D do jogador.
      * @return Vetor posição (x, y, z).
@@ -110,7 +117,14 @@ public:
      * @brief Reduz uma vida do jogador. O placar deve ser notificado em seguida.
      */
     void dano();
-    void resetar_vidas() { jogador_vida = VIDAS_INICIAL; }
+    void resetar_vidas() 
+    { 
+        jogador_vida = VIDAS_INICIAL;  
+        jogador_flag_anim = 1; 
+        jogador_modelo.drawInit(PARADO);
+        jogador_estado_atual = PARADO;
+        jogador_inv = 0;
+    }
 };
 
 #endif // _JOGADOR_H_

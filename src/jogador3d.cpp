@@ -6,22 +6,47 @@
 void Jogador3d::atualiza_animacao()
 {
     
-    int aux = jogador_modelo.next();
+    int aux = 0;
 
-    if (aux)
+    if (jogador_flag_anim)
     {
-        jogador_modelo.drawInit(PARADO);
+        aux = jogador_modelo.next();
     }
+    else
+    {
+        return;
+    }
+    
+    if (aux && jogador_anim_atual != PERDER)
+    {
+        jogador_modelo.drawInit(PARADO);  
+    }
+    
+    if (aux && jogador_estado_atual == PERDER)
+    {
+        jogador_flag_anim = 0;
+        return;
+    }
+    
+
+    
     
     if (aux && jogador_estado_atual == PULANDO)
     {
         jogador_estado_atual = CAINDO;
+        
     }
     else if (aux && jogador_anim_atual== ATACANDO)
     {
         jogador_estado_atual = PARADO;
+        
     }
-    
+    else if (aux && jogador_anim_atual== DANO)
+    {
+        jogador_estado_atual = PARADO;
+        
+    }
+
     if (jogador_anim_atual != jogador_estado_atual || aux)
     {
         switch (jogador_estado_atual)
@@ -29,41 +54,67 @@ void Jogador3d::atualiza_animacao()
         case PARADO:
             jogador_modelo.drawInit(PARADO);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
             
         case ANDANDOFRENTE:
             jogador_modelo.drawInit(ANDANDOFRENTE);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
             
         case ANDANDOTRAS:
             jogador_modelo.drawInit(ANDANDOTRAS);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
         
         case CORRENDOFRENTE:
             jogador_modelo.drawInit(CORRENDOFRENTE);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
         
         case CORRENDOTRAS:
             jogador_modelo.drawInit(CORRENDOTRAS);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
             
         case PULANDO:
             jogador_modelo.drawInit(PULANDO);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
             
         case CAINDO:
             jogador_modelo.drawInit(CAINDO);
             jogador_anim_atual = jogador_estado_atual;
+            
             break;
             
         case ATACANDO:
             jogador_modelo.drawInit(ATACANDO);
             jogador_anim_atual = jogador_estado_atual;
+            
+            break;
+            
+        case DANO:
+            jogador_modelo.drawInit(DANO);
+            jogador_anim_atual = jogador_estado_atual;
+            
+            break;
+            
+        case GANHAR:
+            jogador_modelo.drawInit(GANHAR);
+            jogador_anim_atual = jogador_estado_atual;
+            
+            break;
+            
+        case PERDER:
+            jogador_modelo.drawInit(PERDER);
+            jogador_anim_atual = jogador_estado_atual;
+            
             break;
             
         default:
@@ -170,8 +221,16 @@ bool Jogador3d::verifica_colisao_arena()
 
 void Jogador3d::dano()
 {
-    if (jogador_vida > 0)
+    if (jogador_vida > 0 && !jogador_inv)
     {
         jogador_vida--;
+        
+        if (jogador_vida)
+        {
+            jogador_estado_atual = DANO;
+            jogador_modelo.drawInit(DANO);
+        }
+        else
+            jogador_estado_atual = PERDER;
     }
 }
