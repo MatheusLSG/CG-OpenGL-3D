@@ -4,7 +4,9 @@
 #include "../lib/vec3.h"
 #include <GL/gl.h>
 
-// cores
+/** Constantes de cores, dimensões da janela, parâmetros do jogo e do jogador. */
+
+/* Cores (macros que expandem para cor(r,g,b)) */
 
 #define VERMELHO            cor(0.9, 0, 0)
 #define VERMELHO_CLARO      cor(1, 0, 0)
@@ -16,8 +18,11 @@
 #define PRETO               cor(0, 0, 0)
 #define BRANCO              cor(1, 1, 1)
 
+/** Quando true, modelos não usam emissão (cena fica totalmente escura sem luz). Definido em main.cpp. */
+extern bool forcar_zero_emissao;
 
-// jogo
+
+/* Janela e viewport */
 #define  JANELA_LARGURA    (GLint) 800
 #define  JANELA_ALTURA     (GLint) 500
 
@@ -31,6 +36,10 @@
 
 #define JOGADOR_BRACO_VEL_ANGULAR (GLfloat) 225
 #define JOGADOR_POT_VEL_ANGULAR_MOUSE 5
+
+#define JOGADOR_ALTURA (GLfloat) 80.0
+
+#define OBSTACULO_ALTURA_MULTIPLICADOR 4
 
 #define ARENA_RAIO_PADRAO (GLfloat) 250
 #define ARENA_X_PADRAO (GLfloat) 0
@@ -48,12 +57,9 @@
 
 #define VIDAS_INICIAL   3
 
-// desenho
-
 #define PONTOS_POR_ELIPSE 100
 
-// animacao
-
+/** Estados de animação do jogador (parado, andando, correndo, pulando, atacando, etc.). */
 enum Estado{
     PARADO,
     ANDANDOFRENTE,
@@ -64,8 +70,6 @@ enum Estado{
     CAINDO,
     ATACANDO
 };
-
-// extras
 
 #define PERMITE_COLISAO_ENTRE_TIROS false
 

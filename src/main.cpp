@@ -18,6 +18,11 @@ using namespace tinyxml2;
 #include "../lib/tiro3d.h"
 #include "../lib/jogador3d.h"
 #include "../lib/obstaculo3d.h"
+#include "../lib/placar.h"
+#include "../lib/ControladorJogo.h"
+#include "../lib/leitorDeSVG.h"
+#include "../lib/config.h"
+#include "../lib/pomoDeOuro.h"
 
 
 // VARIAVEIS GLOBAIS
@@ -38,9 +43,18 @@ GLfloat arena_y = 0;
 
 std::list<vec3> dados_obstaculos;
 
-// arena
+// placar
 
-char *arquivo_arena;
+Placar placar;
+
+// arena (path do SVG passado por linha de comando)
+char* arquivo_arena = nullptr;
+
+// Dados carregados do SVG (se arquivo foi passado). Mantém proporções; altura vem de jogador_altura_global.
+DadosArenaSVG dadosArenaSVG;
+
+// Altura do jogador no mundo (ditada por essa variável; usada para obstáculos 4x essa altura).
+GLfloat jogador_altura_global = JOGADOR_ALTURA;
 
 // teclas
 int teclas[512];
@@ -67,6 +81,9 @@ Jogador3d jDraco;
 // obstaculos
 
 std::list<Obstaculo3d> obstaculos;
+
+// Texturas geradas em código (sem arquivos em resources/arena)
+GLuint tex_parede_id = 0;
 
 // flags
 
@@ -104,8 +121,9 @@ int flag_swap = 1;
 
 GLfloat light_pos[3] = {0, 0 ,0};
 
-
-// DEFINICAO DE FUNCOES ----------------------------------------------------------------------
+// Pomo de Ouro: única luz do jogo (toggle com tecla N)
+PomoDeOuro pomoDeOuro;
+bool forcar_zero_emissao = false;      // usado por objloader para zerar emissão quando luz off
 
 void inicializacao();
 void renderiza_cena();
@@ -121,6 +139,10 @@ void mouse_press(int botao, int estado, int x, int y);
 void mouse_move(int x, int y);
 
 void coleta_dados_arena();
+void desenhaChaoAzul();
+void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r, float g, float b, float alpha);
+
+GLuint geraTexturaDifusaParedes();
 
 void idle_jogador_1(GLdouble t_dif);
 void idle_jogador_2(GLdouble t_dif);
@@ -140,14 +162,18 @@ void keyPress(unsigned char key, int x, int y);
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2 && 0)
-    {
-        std::cerr << "erro: numero de argumento invalido!\n";
-        return 1;
+    if (argc >= 2) {
+        arquivo_arena = argv[1];
+        if (!carregaArenaSVG(argv[1], (float)ARENA_RAIO_PADRAO, &dadosArenaSVG)) {
+            if (!carregaArenaSVG("arena/arena.svg", (float)ARENA_RAIO_PADRAO, &dadosArenaSVG)) {
+                if (!carregaArenaSVG("../arena/arena.svg", (float)ARENA_RAIO_PADRAO, &dadosArenaSVG)) {
+                    std::cerr << "Erro ao carregar SVG: " << argv[1] << "\n";
+                    return 1;
+                }
+            }
+        }
     }
 
-    //arquivo_arena = argv[1];
-    
     // glut
     glutInit(&argc, argv);
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
@@ -178,8 +204,12 @@ int main(int argc, char *argv[])
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
     
     glShadeModel (GL_SMOOTH);
-    glEnable(GL_LIGHTING);  
-    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHTING);
+    // Sem luz ambiente global: quando o Pomo de Ouro estiver desligado (N), a cena fica totalmente escura
+    GLfloat zero[4] = { 0.f, 0.f, 0.f, 1.f }; 
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
+    
+    pomoDeOuro.configurarLuzOpenGL();
     glEnable(GL_DEPTH_TEST);
 
     glMatrixMode (GL_PROJECTION);
@@ -231,16 +261,21 @@ void inicializacao ()
     
     vector<int> dracoTransparente = {0,0,0};
 
-    if( !draco.loadTexture(dracoTexturesPaths, dracoTransparente) ) exit(printf("Lista de texturas invalidas!\n"));
-    
+    // if( !draco.loadTexture(dracoTexturesPaths, dracoTransparente) ) exit(printf("Lista de texturas invalidas!\n"));
+    if( !draco.loadTexture(dracoTexturesPaths, dracoTransparente) ) { std::cerr << "Lista de texturas draco invalidas\n"; exit(1); }
+
+    vec3 posDraco(0.f, 0.f, 0.f);
+    if (dadosArenaSVG.ok) {
+        posDraco = vec3(dadosArenaSVG.draco_x, 0.f, dadosArenaSVG.draco_z);
+    }
     jDraco = Jogador3d(
         10,
         0,
-        vec3(0,0,0),
+        posDraco,
         VERDE,
         draco
     );
-    
+
     meshes harry;
     
     harry.loadMeshAnim("resources/harry/idle/idle####.obj", 192, 1);
@@ -262,21 +297,127 @@ void inicializacao ()
     
     vector<int> harryTransparente = {0,0,1,0};
 
-    if( !harry.loadTexture(harryTexturesPaths, harryTransparente)) exit(printf("Lista de texturas invalidas!\n"));
-    
+    // if( !harry.loadTexture(harryTexturesPaths, harryTransparente)) exit(printf("Lista de texturas invalidas!\n"));
+    if( !harry.loadTexture(harryTexturesPaths, harryTransparente)) { std::cerr << "Lista de texturas harry invalidas\n"; exit(1); }
+
+    vec3 posHarry(0.f, 0.f, 200.f);
+    if (dadosArenaSVG.ok) {
+        posHarry = vec3(dadosArenaSVG.harry_x, 0.f, dadosArenaSVG.harry_z);
+    }
     jHarry = Jogador3d(
         10,
         180,
-        vec3(0,0,200),
+        posHarry,
         VERMELHO,
         harry
     );
-    
-    
+
+    if (dadosArenaSVG.ok) {
+        obstaculos.clear();
+        GLfloat alt = OBSTACULO_ALTURA_MULTIPLICADOR * jogador_altura_global;
+        obstaculos.push_back(Obstaculo3d(
+            vec3(dadosArenaSVG.arena_cx, 0.f, dadosArenaSVG.arena_cy),
+            dadosArenaSVG.arena_r,
+            AZUL,
+            alt,
+            OBSTACULO_ATRATOR,
+            true   // teto da arena (sem sol no infinito, arena pode ser fechada)
+        ));
+        for (size_t i = 0; i < dadosArenaSVG.pilastras.size(); ++i) {
+            const Circulo2D& p = dadosArenaSVG.pilastras[i];
+            obstaculos.push_back(Obstaculo3d(
+                vec3(p.cx, 0.f, p.cy),
+                p.r,
+                PRETO,
+                alt,
+                OBSTACULO_REPULSOR
+            ));
+        }
+
+        tex_parede_id = geraTexturaDifusaParedes();
+        if (tex_parede_id) Obstaculo3d::setTexturaParedes(tex_parede_id);
+    }
 }
 
+GLuint geraTexturaDifusaParedes()
+{
+    const int TAM = 64;
+    unsigned char* pix = new unsigned char[TAM * TAM * 3];
+    for (int y = 0; y < TAM; y++) {
+        for (int x = 0; x < TAM; x++) {
+            int v = 12 + ((x * 7 + y * 13) % 17);
+            if (v > 28) v = 28;
+            pix[(y * TAM + x) * 3 + 0] = (unsigned char)v;
+            pix[(y * TAM + x) * 3 + 1] = (unsigned char)v;
+            pix[(y * TAM + x) * 3 + 2] = (unsigned char)v;
+        }
+    }
+    GLuint id = 0;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, TAM, TAM, 0, GL_RGB, GL_UNSIGNED_BYTE, pix);
+    delete[] pix;
+    return id;
+}
 
+// Chão azul só com specular (tipo vidro), sem textura difusa.
+void desenhaChaoAzul()
+{
+    if (!dadosArenaSVG.ok) return;
 
+    glPushMatrix();
+    glTranslatef(dadosArenaSVG.arena_cx, 0.f, dadosArenaSVG.arena_cy);
+    glRotatef(-90.f, 1.f, 0.f, 0.f);
+
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+
+    GLfloat mat_amb_diff[4] = { AZUL.x(), AZUL.y(), AZUL.z(), 1.0f };
+    GLfloat mat_spec[4]    = { 0.5f, 0.5f, 0.65f, 1.0f };
+    GLfloat shininess[]    = { 90.0f };
+    glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_amb_diff);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_spec);
+    glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+    glColor3f(AZUL.x(), AZUL.y(), AZUL.z());
+
+    gluDisk(quad, 0.0, dadosArenaSVG.arena_r, PONTOS_POR_ELIPSE, 1);
+    gluDeleteQuadric(quad);
+
+    glPopMatrix();
+}
+
+void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r, float g, float b, float alpha)
+{
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_ALPHA_TEST);
+
+    glPushMatrix();
+    glTranslatef(pos.x(), pos.y(), pos.z());
+    glRotatef(-90.f, 1.f, 0.f, 0.f);
+
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    glColor4f(r, g, b, alpha);
+    GLfloat mat[4] = { r, g, b, alpha };
+    glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
+    gluCylinder(quad, raio, raio, altura, PONTOS_POR_ELIPSE, 4);
+    gluDisk(quad, 0.0, raio, PONTOS_POR_ELIPSE, 1);
+    glTranslatef(0.f, 0.f, altura);
+    glRotatef(180.f, 1.f, 0.f, 0.f);
+    gluDisk(quad, 0.0, raio, PONTOS_POR_ELIPSE, 1);
+    gluDeleteQuadric(quad);
+
+    glPopMatrix();
+
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.5f);
+    glDisable(GL_BLEND);
+}
 
 void DrawAxes(double size)
 {
@@ -289,35 +430,31 @@ void DrawAxes(double size)
     glMaterialfv(GL_FRONT, GL_SPECULAR, no_mat);
     glMaterialfv(GL_FRONT, GL_SHININESS, no_mat);
 
-    //x axis
     glPushMatrix();
         glMaterialfv(GL_FRONT, GL_EMISSION, mat_ambient_r);
         glColor3fv(mat_ambient_r);
         glScalef(size, size*0.1, size*0.1);
-        glTranslatef(0.5, 0, 0); // put in one end
+        glTranslatef(0.5, 0, 0);
         glutSolidCube(1.0);
     glPopMatrix();
 
-    //y axis
     glPushMatrix();
         glMaterialfv(GL_FRONT, GL_EMISSION, mat_ambient_g);
         glColor3fv(mat_ambient_g);
         glRotatef(90,0,0,1);
         glScalef(size, size*0.1, size*0.1);
-        glTranslatef(0.5, 0, 0); // put in one end
+        glTranslatef(0.5, 0, 0);
         glutSolidCube(1.0);
     glPopMatrix();
 
-    //z axis
     glPushMatrix();
         glMaterialfv(GL_FRONT, GL_EMISSION, mat_ambient_b);
         glColor3fv(mat_ambient_b);
         glRotatef(-90,0,1,0);
         glScalef(size, size*0.1, size*0.1);
-        glTranslatef(0.5, 0, 0); // put in one end
+        glTranslatef(0.5, 0, 0);
         glutSolidCube(1.0);
     glPopMatrix();
-    
 }
 
 void desenhaJogador(){
@@ -325,70 +462,87 @@ void desenhaJogador(){
 
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
-    //INICIO
-    //Translada para o centro do personagem para facilitar a rotacao da camera
-        glTranslatef(0,-40,0);
+    // Translada para o centro do personagem para facilitar a rotacao da camera
+    glTranslatef(0,-40,0);
+    pomoDeOuro.atualizar(&dadosArenaSVG, OBSTACULO_ALTURA_MULTIPLICADOR * jogador_altura_global);
+    forcar_zero_emissao = !pomoDeOuro.estaAtivo();
+    if (!pomoDeOuro.estaAtivo()) {
+        GLfloat zero[4] = { 0.f, 0.f, 0.f, 1.f };
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
+        for (int i = 0; i < 8; i++) glDisable((GLenum)(GL_LIGHT0 + i));
+    }
 
+    // Viewport Harry
+    glViewport(0, 0, janela_largura/2, janela_altura);
+    glPushMatrix();
+        glTranslatef(0, 0, -200);
+        pomoDeOuro.aplicarLuz();
 
-        // ViewportHarry
-        glViewport(0, 0, janela_largura/2, janela_altura);
-        glPushMatrix();
-                
-            //camera
-            glTranslatef(0, 0, -200);
-            
-            //Desenho Mundo
+        desenhaChaoAzul();
+        for (Obstaculo3d& o : obstaculos)
+            o.desenha();
+        if (pomoDeOuro.estaAtivo())
+            pomoDeOuro.desenhar();
 
-            
-          
-            glEnable(GL_ALPHA_TEST);
-            glAlphaFunc(GL_GREATER, 0.5f); // Descarta qualquer pixel com transparência maior que a metade
+        glEnable(GL_ALPHA_TEST);
+            glAlphaFunc(GL_GREATER, 0.5f);
             jHarry.desenha_jogador();
-            
             jDraco.desenha_jogador();
-            
 
             if (coordsysToggle == 1)  DrawAxes(83);
     
         glPopMatrix();
             
-        // ViewportDraco
-        glViewport(janela_largura/2, 0, janela_largura/2, janela_altura);
-        
-        glPushMatrix();
+    // Viewport Draco: mesma câmera, centrada no Draco
+    glViewport(janela_largura/2, 0, janela_largura/2, janela_altura);
+    glPushMatrix();
+        glLoadIdentity();
+        {
+            GLfloat ex = (GLfloat)(zoom*sin(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
+            GLfloat ey = (GLfloat)(zoom*sin(camXYAngle*M_PI/180));
+            GLfloat ez = (GLfloat)(zoom*cos(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
+            gluLookAt(ex, ey, ez, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+        }
+        glTranslatef(-jDraco.pos().x(), -jDraco.pos().y(), -jDraco.pos().z());
+        glTranslatef(0.f, -40.f, 0.f);
+        pomoDeOuro.aplicarLuz();
 
-            //camera
-            glTranslatef(0, 0, 100);
-            glRotatef(180, 0,1,0);
+        desenhaChaoAzul();
+        for (Obstaculo3d& o : obstaculos)
+            o.desenha();
+        if (pomoDeOuro.estaAtivo())
+            pomoDeOuro.desenhar();
 
-            //DesenhoMundo
-            
-            glEnable(GL_ALPHA_TEST);
-            glAlphaFunc(GL_GREATER, 0.5f); // Descarta qualquer pixel com transparência maior que a metade
+        glEnable(GL_ALPHA_TEST);
+            glAlphaFunc(GL_GREATER, 0.5f);
             jHarry.desenha_jogador();
-
             jDraco.desenha_jogador();
-            
-            
+
             if (coordsysToggle == 1) DrawAxes(85);
 
         glPopMatrix();
-        
-    //FIM
 
     glPopMatrix();
 }
 
+// Retorna o controlador de jogo (singleton deste arquivo)
+ControladorJogo& getControladorJogo()
+{
+    static ControladorJogo controladorJogo(jHarry, jDraco, placar);
+    return controladorJogo;
+}
+
 void display(void)
 {
-    if (updateDrawing){
+    if (updateDrawing) {
         updateDrawing = 0;
-    } else{
+        jHarry.atualiza_animacao();
+        jDraco.atualiza_animacao();
+        ControladorJogo& cj = getControladorJogo();
+        cj.atualizar(0.0);
+    } else {
         return;
     }
-    
-    jHarry.atualiza_animacao();
-    jDraco.atualiza_animacao();
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -407,27 +561,15 @@ void display(void)
     
     desenhaJogador();
 
-    //Define e desenha a fonte de luz
+    getControladorJogo().desenharHUD();
 
-    GLfloat light_position[] = {(GLfloat) (zoom*sin(camXZAngle*M_PI/180)*cos((camXYAngle*M_PI/180))),
-                                (GLfloat) (zoom*                         sin((camXYAngle*M_PI/180))),
-                                (GLfloat) (zoom*cos(camXZAngle*M_PI/180)*cos((camXYAngle*M_PI/180))),
-                                1};
-
-    glLightfv(GL_LIGHT0,GL_POSITION,light_position);
-    glDisable(GL_LIGHTING);
-        glPointSize(15);
-        glColor3f(1.0,1.0,0.0);
-        glBegin(GL_POINTS);
-            glVertex3f(light_position[0],light_position[1],light_position[2]);
-        glEnd();    
-    glEnable(GL_LIGHTING);
-    
     glutSwapBuffers ();
 }
 
 void keyPress(unsigned char key, int x, int y)
 {
+    ControladorJogo& controladorJogo = getControladorJogo();
+
     switch(key){
     case '1':
         jDraco.para();
@@ -457,6 +599,24 @@ void keyPress(unsigned char key, int x, int y)
         jDraco.atira();
         jHarry.atira();
         break;
+    case 'n':
+    case 'N':
+        pomoDeOuro.alternarAtivo();
+        break;
+    case 'd':
+        if (jDraco.vidas() > 0 && controladorJogo.getEstado() == EM_PARTIDA) {
+            int vidasAntes = jDraco.vidas();
+            jDraco.dano();
+            placar.notificarDanoDireita(vidasAntes);
+        }
+        break;
+    case 'h':
+        if (jHarry.vidas() > 0 && controladorJogo.getEstado() == EM_PARTIDA) {
+            int vidasAntes = jHarry.vidas();
+            jHarry.dano();
+            placar.notificarDanoEsquerda(vidasAntes);
+        }
+        break;
     case 'a':
         armaToggle = !armaToggle;
         break;
@@ -475,6 +635,10 @@ void keyPress(unsigned char key, int x, int y)
     case '-':
         zoom--;
          break;
+    case 'r':
+    case 'R':
+        controladorJogo.resetarJogo();
+        break;
     case 27 :
          exit(0);
     }

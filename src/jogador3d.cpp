@@ -170,5 +170,8 @@ bool Jogador3d::verifica_colisao_arena()
 
 void Jogador3d::dano()
 {
-
+    if (jogador_vida > 0)
+    {
+        jogador_vida--;
+    }
 }

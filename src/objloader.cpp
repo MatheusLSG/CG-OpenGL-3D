@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../lib/objloader.h"
+#include "../lib/config.h"
 #include "../lib/imageloader.h"
 
 using namespace std;
@@ -40,7 +41,7 @@ int meshes::loadMeshAnim(string path, int qtd, int none){
     for(int i = 0; i<qtd; i++){
         snprintf (str, 7, "%04d", i);
         path.replace(index, 4, str);
-        std::cout << path << std::endl; 
+        // std::cout << path << std::endl;  // debug: prints de objetos comentados
         this->vecMeshes[movID].push_back(m);
         this->vecMeshes[movID][this->vecMeshes[movID].size()-1].loadMesh(path, none);
     }
@@ -114,7 +115,7 @@ bool mesh::loadMesh(string path, int none){
     int v_util_now = 0;
     FILE* file= fopen(path.data(), "r");
     if(file== NULL){
-        cout<< "falha ao carregar o arquivo"<< endl;
+        // cout<< "falha ao carregar o arquivo"<< endl;  // debug: comentado
         return false;
     }
     else{ 
@@ -144,7 +145,7 @@ bool mesh::loadMesh(string path, int none){
                 unsigned int vertInd[3], uvInd[3], normInd[3];
                 int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertInd[0], &uvInd[0], &normInd[0], &vertInd[1], &uvInd[1], &normInd[1], &vertInd[2], &uvInd[2], &normInd[2]);
                 if(matches !=9){
-                        printf("QUantidade de valores lidos diferente do esperado. Falha ao ler uma linha de face");
+                        // printf("QUantidade de valores lidos diferente do esperado. Falha ao ler uma linha de face");  // debug: comentado
                         return false;			
                 }
                 //Cria uma lista com os índices na ordem apropriada para o desenho das faces
@@ -214,11 +215,12 @@ void mesh::draw(GLuint *textIDs){
 
     int cont=0;
     GLfloat materialEmission[] = { 0.10, 0.10, 0.10, 1};
+    GLfloat emissionZero[] = { 0, 0, 0, 1 };
     GLfloat materialColorA[] = { 0.1, 0.1, 0.1, 0.1};
     GLfloat materialColorD[] = { .90, .90, .90, 1};
     glColor3f(1,1,1);
 
-    glMaterialfv(GL_FRONT, GL_EMISSION, materialEmission);
+    glMaterialfv(GL_FRONT, GL_EMISSION, forcar_zero_emissao ? emissionZero : materialEmission);
     glMaterialfv(GL_FRONT, GL_AMBIENT, materialColorA);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, materialColorD);
 
