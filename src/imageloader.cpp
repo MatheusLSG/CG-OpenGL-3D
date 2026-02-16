@@ -111,7 +111,9 @@ namespace {
 }
 
 Image* loadBMP(const char* filename) {
+	Image* output;
 	
+
 	ifstream input;
 	input.open(filename, ifstream::binary);
 	assert(!input.fail() || !"Could not find file");
@@ -128,59 +130,94 @@ Image* loadBMP(const char* filename) {
 	int headerSize = readInt(input);
 	int width;
 	int height;
-	switch(headerSize) {
-		
-		case 40:
-			//V3
-			width = readInt(input);
-			height = readInt(input);
-			input.ignore(2);
-			assert(readShort(input) == 24 || !"Image is not 24 bits per pixel");
-			assert(readShort(input) == 0 || !"Image is compressed");
-			break;
-		case 12:
-			//OS/2 V1
-			width = readShort(input);
-			height = readShort(input);
-			input.ignore(2);
-			assert(readShort(input) == 24 || !"Image is not 24 bits per pixel");
-			break;
-		case 64:
-			//OS/2 V2
-			assert(!"Can't load OS/2 V2 bitmaps");
-			break;
-		case 108:
-			//Windows V4
-			assert(!"Can't load Windows V4 bitmaps");
-			break;
-		case 124:
-			//Windows V5
-			assert(!"Can't load Windows V5 bitmaps");
-			break;
-		default:
-			assert(!"Unknown bitmap format");
-	}
+	short int bpp;
+	if (headerSize == 40)
+	{
+		//V3
+		width = readInt(input);
+		height = readInt(input);
+		input.ignore(2);
+		assert(readShort(input) == 24 || !"Image is not 24 bits per pixel");
+		assert(readShort(input) == 0 || !"Image is compressed");
 
-	//Read the data
-	int bytesPerRow = ((width * 3 + 3) / 4) * 4 - (width * 3 % 4);
-	int size = bytesPerRow * height;
-	auto_array<char> pixels(new char[size]);
-	input.seekg(dataOffset, ios_base::beg);
-	input.read(pixels.get(), size);
+		//Read the data
+		int bytesPerRow = ((width * 3 + 3) / 4) * 4 - (width * 3 % 4);
+		int size = bytesPerRow * height;
+		auto_array<char> pixels(new char[size]);
+		input.seekg(dataOffset, ios_base::beg);
+		input.read(pixels.get(), size);
 
-	//Get the data into the right format
-	auto_array<char> pixels2(new char[width * height * 3]);
-	for(int y = 0; y < height; y++) {
-		for(int x = 0; x < width; x++) {
-			for(int c = 0; c < 3; c++) {
-				pixels2[3 * (width * y + x) + c] =
-					pixels[bytesPerRow * y + 3 * x + (2 - c)];
+		//Get the data into the right format
+		auto_array<char> pixels2(new char[width * height * 3]);
+		for(int y = 0; y < height; y++) {
+			for(int x = 0; x < width; x++) {
+				for(int c = 0; c < 3; c++) {
+					pixels2[3 * (width * y + x) + c] =
+						pixels[bytesPerRow * y + 3 * x + (2 - c)];
+				}
 			}
 		}
-	}
 
+		output = new Image(pixels2.release(), width, height);
+	}else if(headerSize == 12){
+		//OS/2 V1
+		width = readShort(input);
+		height = readShort(input);
+		input.ignore(2);
+		assert(readShort(input) == 24 || !"Image is not 24 bits per pixel");
+
+		//Read the data
+		int bytesPerRow = ((width * 3 + 3) / 4) * 4 - (width * 3 % 4);
+		int size = bytesPerRow * height;
+		auto_array<char> pixels(new char[size]);
+		input.seekg(dataOffset, ios_base::beg);
+		input.read(pixels.get(), size);
+
+		//Get the data into the right format
+		auto_array<char> pixels2(new char[width * height * 3]);
+		for(int y = 0; y < height; y++) {
+			for(int x = 0; x < width; x++) {
+				for(int c = 0; c < 3; c++) {
+					pixels2[3 * (width * y + x) + c] =
+						pixels[bytesPerRow * y + 3 * x + (2 - c)];
+				}
+			}
+		}
+
+		output = new Image(pixels2.release(), width, height);
+	}else if (headerSize == 124)
+	{
+		//Windows V5
+		width = readInt(input);
+		height = readInt(input);
+		assert(readShort(input) == 1 || !"Nao tem 1 plano");
+		bpp = readShort(input);
+
+		//Read the data
+		int bytesPerRow = width * 4;
+		int size = bytesPerRow * height;
+		auto_array<char> pixels(new char[size]);
+		input.seekg(dataOffset, ios_base::beg);
+		input.read(pixels.get(), size);
+
+		//Get the data into the right format
+		auto_array<char> pixels2(new char[width * height * 4]);
+		for(int y = 0; y < height; y++) {
+			for(int x = 0; x < width; x++) {
+				for(int c = 0; c < 4; c++) {
+					pixels2[4 * (width * y + x) + c] =
+						pixels[bytesPerRow * y + 4 * x + (2 - c)];
+				}
+			}
+		}
+
+		output = new Image(pixels2.release(), width, height);
+	} else {
+		assert(!"Unknown bitmap format");
+	}
+	
 	input.close();
-	return new Image(pixels2.release(), width, height);
+	return output;
 }
 
 

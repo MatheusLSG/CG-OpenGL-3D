@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
     
     // glut
     glutInit(&argc, argv);
-    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     
     // Cria a janela
     glutInitWindowSize(janela_largura, janela_altura);
@@ -228,19 +228,51 @@ void inicializacao ()
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex0.bmp");
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex1.bmp");
     dracoTexturesPaths.push_back("resources/draco/texture/dracoTex2.bmp");
+    
+    vector<int> dracoTransparente = {0,0,0};
 
-    if( !draco.loadTexture(dracoTexturesPaths) ) exit(printf("Lista de texturas invalidas!\n"));
+    if( !draco.loadTexture(dracoTexturesPaths, dracoTransparente) ) exit(printf("Lista de texturas invalidas!\n"));
     
     jDraco = Jogador3d(
         10,
-        180,
+        0,
         vec3(0,0,0),
         VERDE,
         draco
     );
+    
+    meshes harry;
+    
+    harry.loadMeshAnim("resources/harry/idle/idle####.obj", 192, 1);
+    harry.loadMeshAnim("resources/harry/walkforw/walkforw####.obj", 34, 1);
+    harry.loadMeshAnim("resources/harry/walkback/walkback####.obj", 36, 1);
+    harry.loadMeshAnim("resources/harry/runforw/runforw####.obj", 21, 1);
+    harry.loadMeshAnim("resources/harry/runback/runback####.obj", 21, 1);
+    harry.loadMeshAnim("resources/harry/jump/jump####.obj", 26, 1);
+    harry.loadMeshAnim("resources/harry/fall/fall####.obj", 33, 1);
+    harry.loadMeshAnim("resources/harry/atack/atack####.obj", 74, 1);
+    harry.drawInit(PARADO);
+     
+    
+    vector<string> harryTexturesPaths;
+    harryTexturesPaths.push_back("resources/harry/texture/harryTex0.bmp");
+    harryTexturesPaths.push_back("resources/harry/texture/harryTex1.bmp");
+    harryTexturesPaths.push_back("resources/harry/texture/harryTex2.bmp");
+    harryTexturesPaths.push_back("resources/harry/texture/harryTex3.bmp");
+    
+    vector<int> harryTransparente = {0,0,1,0};
 
-
-    //harry.loadMeshAnim("resources/harry/Default/harry.obj", 1);
+    if( !harry.loadTexture(harryTexturesPaths, harryTransparente)) exit(printf("Lista de texturas invalidas!\n"));
+    
+    jHarry = Jogador3d(
+        10,
+        180,
+        vec3(0,0,200),
+        VERMELHO,
+        harry
+    );
+    
+    
 }
 
 
@@ -303,16 +335,18 @@ void desenhaJogador(){
         glPushMatrix();
                 
             //camera
-            glTranslatef(0, 0, -25);
+            glTranslatef(0, 0, -200);
             
             //Desenho Mundo
 
-            //harry.draw(0, 0);
             
           
-            //desenhar draco
-
+            glEnable(GL_ALPHA_TEST);
+            glAlphaFunc(GL_GREATER, 0.5f); // Descarta qualquer pixel com transparência maior que a metade
+            jHarry.desenha_jogador();
+            
             jDraco.desenha_jogador();
+            
 
             if (coordsysToggle == 1)  DrawAxes(83);
     
@@ -324,12 +358,14 @@ void desenhaJogador(){
         glPushMatrix();
 
             //camera
-            glTranslatef(0, 0, 25);
+            glTranslatef(0, 0, 100);
             glRotatef(180, 0,1,0);
 
             //DesenhoMundo
-            //harry.draw(0,0);
             
+            glEnable(GL_ALPHA_TEST);
+            glAlphaFunc(GL_GREATER, 0.5f); // Descarta qualquer pixel com transparência maior que a metade
+            jHarry.desenha_jogador();
 
             jDraco.desenha_jogador();
             
@@ -351,6 +387,7 @@ void display(void)
         return;
     }
     
+    jHarry.atualiza_animacao();
     jDraco.atualiza_animacao();
 
     glMatrixMode(GL_MODELVIEW);
@@ -394,24 +431,31 @@ void keyPress(unsigned char key, int x, int y)
     switch(key){
     case '1':
         jDraco.para();
+        jHarry.para();
         break;
     case '2':
         jDraco.move(1);
+        jHarry.move(1);
         break;
     case '3':
         jDraco.move(2);
+        jHarry.move(2);
         break;
     case '4':
         jDraco.move(-1);
+        jHarry.move(-1);
         break;
     case '5':
         jDraco.move(-2);
+        jHarry.move(-2);
         break;
     case '6':
         jDraco.pula();
+        jHarry.pula();
         break;
     case '7':
         jDraco.atira();
+        jHarry.atira();
         break;
     case 'a':
         armaToggle = !armaToggle;

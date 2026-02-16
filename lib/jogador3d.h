@@ -46,7 +46,7 @@ public:
         jogador_raio            {ini_jogador_raio},
         jogador_pos             {ini_jogador_pos},
         jogador_dir             {rotacao3Dz(ini_jogador_theta, vec3(1,0,0))},
-        Jogador_theta           {},
+        Jogador_theta           {ini_jogador_theta},
         jogador_modelo          {animacoes},
         jogador_anim_atual      {PARADO},
         jogador_arma_pos        {ini_jogador_pos},

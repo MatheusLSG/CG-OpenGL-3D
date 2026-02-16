@@ -80,7 +80,7 @@ void Jogador3d::desenha_jogador()
 
         glTranslatef(jogador_pos.x(), jogador_arma_pos.y(), jogador_pos.z());
         
-        glRotatef(Jogador_theta, 0,0,1);
+        glRotatef(Jogador_theta, 0,1,0);
         
         jogador_modelo.drawCurrent();
     

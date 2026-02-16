@@ -54,7 +54,7 @@ void meshes::draw(int movID, int frameId){
 }
 
 //Le a textura
-bool meshes::loadTexture(vector<string> paths){
+bool meshes::loadTexture(vector<string> paths, vector<int> transparente){
     int n = paths.size();
     
     if (!n) return 0;
@@ -62,6 +62,9 @@ bool meshes::loadTexture(vector<string> paths){
     this->texIDs =  (GLuint*) calloc( n, sizeof(GLuint));
     
     glGenTextures(n, this->texIDs );
+
+    
+    
 
     for (int i = 0; i < n; i++)
     {
@@ -72,6 +75,10 @@ bool meshes::loadTexture(vector<string> paths){
 
         this->texWidth = image->width;
         this->texHeight = image->height;
+        
+        int formato; 
+        if (transparente[i]) formato = GL_RGBA;
+        else  formato = GL_RGB;
 
         glBindTexture( GL_TEXTURE_2D, this->texIDs[i] );
         //glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -81,10 +88,10 @@ bool meshes::loadTexture(vector<string> paths){
         glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR );
         glTexImage2D(GL_TEXTURE_2D,                //Always GL_TEXTURE_2D
                                 0,                            //0 for now
-                                GL_RGB,                       //Format OpenGL uses for image
+                                GL_RGBA,                       //Format OpenGL uses for image
                                 this->texWidth, this->texHeight,  //Width and height
                                 0,                            //The border of the image
-                                GL_RGB, //GL_RGB, because pixels are stored in RGB format
+                                formato,                         //Src format
                                 GL_UNSIGNED_BYTE, //GL_UNSIGNED_BYTE, because pixels are stored
                                                 //as unsigned numbers
                                 image->pixels);               //The actual pixel data
@@ -180,7 +187,7 @@ bool mesh::loadMesh(string path, int none){
                 } 
                 else 
                 {
-                    tIdx = lineHeader[9] - '0';
+                    tIdx = string(lineHeader).back() - '0';
                 }
             }
         }

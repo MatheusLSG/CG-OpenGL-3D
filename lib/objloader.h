@@ -67,7 +67,7 @@ class meshes{
     };
     //
     int loadMeshAnim(string path, int qtd, int none);//Path é o caminho para o arquivo .obj e deve conter o nome do arquivo.obj
-    bool loadTexture(vector<string> path);//Path é o caminho para o arquivo .png e deve conter o nome do arquivo.png
+    bool loadTexture(vector<string> path, vector<int> transparente);//Path é o caminho para o arquivo .png e deve conter o nome do arquivo.png
     void draw(int movID, int frameId);
     void drawInit(int movID);
     void drawCurrent();
