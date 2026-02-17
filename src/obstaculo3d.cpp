@@ -19,9 +19,9 @@ void Obstaculo3d::desenha()
 
     GLUquadric* quad = gluNewQuadric();
     gluQuadricNormals(quad, GLU_SMOOTH);
-    gluQuadricTexture(quad, GL_TRUE);
 
     if (idTexturaParedes_ != 0) {
+        gluQuadricTexture(quad, GL_TRUE);
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, idTexturaParedes_);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -29,6 +29,9 @@ void Obstaculo3d::desenha()
         GLfloat mat[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
     } else {
+        // Sem textura: desliga textura e não gera coords (drivers fracos/WSL podem falhar com tex coords e nenhuma textura).
+        gluQuadricTexture(quad, GL_FALSE);
+        glDisable(GL_TEXTURE_2D);
         glColor3f(PRETO.x(), PRETO.y(), PRETO.z());
         GLfloat mat[4] = { PRETO.x(), PRETO.y(), PRETO.z(), 1.0f };
         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);

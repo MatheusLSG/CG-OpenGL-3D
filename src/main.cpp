@@ -541,14 +541,14 @@ ControladorJogo& getControladorJogo()
 
 void display(void)
 {
+    // Sempre desenha e troca buffers (evita tela vazia em hardware lento/WSL onde
+    // muitos display() podem rodar antes do primeiro idle() setar updateDrawing).
     if (updateDrawing) {
         updateDrawing = 0;
         jHarry.atualiza_animacao();
         jDraco.atualiza_animacao();
         ControladorJogo& cj = getControladorJogo();
         cj.atualizar(0.0);
-    } else {
-        return;
     }
 
     glMatrixMode(GL_MODELVIEW);
