@@ -24,6 +24,9 @@ using namespace tinyxml2;
 #include "../lib/config.h"
 #include "../lib/pomoDeOuro.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // VARIAVEIS GLOBAIS
 
@@ -370,6 +373,33 @@ GLuint geraTexturaDifusaParedes()
     return id;
 }
 
+// Desenha um disco no plano XY (z=0) com normal (0,0,1).
+static void desenhaDisco(GLfloat raio, int numFatias)
+{
+    glBegin(GL_TRIANGLE_FAN);
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    for (int i = 0; i <= numFatias; ++i) {
+        GLfloat t = (GLfloat)i / (GLfloat)numFatias * 2.0f * (GLfloat)M_PI;
+        glVertex3f(raio * cosf(t), raio * sinf(t), 0.0f);
+    }
+    glEnd();
+}
+
+// Desenha a superfície lateral de um cilindro ao longo do eixo Z (z=0 até z=altura).
+static void desenhaCilindroLateral(GLfloat raio, GLfloat altura, int numFatias)
+{
+    glBegin(GL_QUAD_STRIP);
+    for (int i = 0; i <= numFatias; ++i) {
+        GLfloat ang = (GLfloat)i / (GLfloat)numFatias * 2.0f * (GLfloat)M_PI;
+        GLfloat cx = cosf(ang), sy = sinf(ang);
+        glNormal3f(cx, sy, 0.0f);
+        glVertex3f(raio * cx, raio * sy, 0.0f);
+        glVertex3f(raio * cx, raio * sy, altura);
+    }
+    glEnd();
+}
+
 // Chão azul só com specular (tipo vidro), sem textura difusa.
 void desenhaChaoAzul()
 {
@@ -379,9 +409,6 @@ void desenhaChaoAzul()
     glTranslatef(dadosArenaSVG.arena_cx, 0.f, dadosArenaSVG.arena_cy);
     glRotatef(-90.f, 1.f, 0.f, 0.f);
 
-    GLUquadric* quad = gluNewQuadric();
-    gluQuadricNormals(quad, GLU_SMOOTH);
-
     GLfloat mat_amb_diff[4] = { AZUL.x(), AZUL.y(), AZUL.z(), 1.0f };
     GLfloat mat_spec[4]    = { 0.5f, 0.5f, 0.65f, 1.0f };
     GLfloat shininess[]    = { 90.0f };
@@ -390,8 +417,7 @@ void desenhaChaoAzul()
     glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
     glColor3f(AZUL.x(), AZUL.y(), AZUL.z());
 
-    gluDisk(quad, 0.0, dadosArenaSVG.arena_r, PONTOS_POR_ELIPSE, 1);
-    gluDeleteQuadric(quad);
+    desenhaDisco(dadosArenaSVG.arena_r, PONTOS_POR_ELIPSE);
 
     glPopMatrix();
 }
@@ -406,17 +432,14 @@ void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r
     glTranslatef(pos.x(), pos.y(), pos.z());
     glRotatef(-90.f, 1.f, 0.f, 0.f);
 
-    GLUquadric* quad = gluNewQuadric();
-    gluQuadricNormals(quad, GLU_SMOOTH);
     glColor4f(r, g, b, alpha);
     GLfloat mat[4] = { r, g, b, alpha };
     glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
-    gluCylinder(quad, raio, raio, altura, PONTOS_POR_ELIPSE, 4);
-    gluDisk(quad, 0.0, raio, PONTOS_POR_ELIPSE, 1);
+    desenhaCilindroLateral(raio, altura, PONTOS_POR_ELIPSE);
+    desenhaDisco(raio, PONTOS_POR_ELIPSE);
     glTranslatef(0.f, 0.f, altura);
     glRotatef(180.f, 1.f, 0.f, 0.f);
-    gluDisk(quad, 0.0, raio, PONTOS_POR_ELIPSE, 1);
-    gluDeleteQuadric(quad);
+    desenhaDisco(raio, PONTOS_POR_ELIPSE);
 
     glPopMatrix();
 

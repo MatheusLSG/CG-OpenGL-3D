@@ -2,7 +2,6 @@
 #define _OBSTACULO_H_
 
 #include <GL/gl.h>
-#include <GL/glu.h>
 #include "config.h"
 #include "vec3.h"
 

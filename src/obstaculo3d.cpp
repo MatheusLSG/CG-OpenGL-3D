@@ -8,20 +8,53 @@
 
 GLuint Obstaculo3d::idTexturaParedes_ = 0;
 
+// Desenha um disco no plano XY (z=0) com normal (0,0,1), usando triângulos.
+static void desenhaDisco(GLfloat raio, int numFatias)
+{
+    glBegin(GL_TRIANGLE_FAN);
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    for (int i = 0; i <= numFatias; ++i) {
+        GLfloat t = (GLfloat)i / (GLfloat)numFatias * 2.0f * (GLfloat)M_PI;
+        GLfloat cx = std::cos(t) * raio;
+        GLfloat sy = std::sin(t) * raio;
+        glVertex3f(cx, sy, 0.0f);
+    }
+    glEnd();
+}
+
+// Desenha a superfície lateral de um cilindro ao longo do eixo Z (de z=0 a z=altura).
+// Se texCoord true, envia coordenadas de textura para a lateral.
+static void desenhaCilindroLateral(GLfloat raio, GLfloat altura, int numFatias, bool texCoord = false)
+{
+    glBegin(GL_QUAD_STRIP);
+    for (int i = 0; i <= numFatias; ++i) {
+        GLfloat ang = (GLfloat)i / (GLfloat)numFatias * 2.0f * (GLfloat)M_PI;
+        GLfloat cx = std::cos(ang);
+        GLfloat sy = std::sin(ang);
+        glNormal3f(cx, sy, 0.0f);
+        if (texCoord) {
+            GLfloat s = (GLfloat)i / (GLfloat)numFatias;
+            glTexCoord2f(s, 0.0f); glVertex3f(raio * cx, raio * sy, 0.0f);
+            glTexCoord2f(s, 1.0f); glVertex3f(raio * cx, raio * sy, altura);
+        } else {
+            glVertex3f(raio * cx, raio * sy, 0.0f);
+            glVertex3f(raio * cx, raio * sy, altura);
+        }
+    }
+    glEnd();
+}
+
 void Obstaculo3d::desenha()
 {
     glPushMatrix();
 
     // obstaculo_pos = centro da base do cilindro; eixo ao longo Y (altura)
     glTranslatef(obstaculo_pos.x(), obstaculo_pos.y(), obstaculo_pos.z());
-    // gluCylinder usa eixo Z; rotacionamos para ter eixo Y
+    // Cilindro desenhado ao longo de Z; rotacionamos para ter eixo Y
     glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
 
-    GLUquadric* quad = gluNewQuadric();
-    gluQuadricNormals(quad, GLU_SMOOTH);
-
     if (idTexturaParedes_ != 0) {
-        gluQuadricTexture(quad, GL_TRUE);
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, idTexturaParedes_);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -29,15 +62,13 @@ void Obstaculo3d::desenha()
         GLfloat mat[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
     } else {
-        // Sem textura: desliga textura e não gera coords (drivers fracos/WSL podem falhar com tex coords e nenhuma textura).
-        gluQuadricTexture(quad, GL_FALSE);
         glDisable(GL_TEXTURE_2D);
         glColor3f(PRETO.x(), PRETO.y(), PRETO.z());
         GLfloat mat[4] = { PRETO.x(), PRETO.y(), PRETO.z(), 1.0f };
         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
     }
 
-    gluCylinder(quad, obstaculo_raio, obstaculo_raio, obstaculo_altura, PONTOS_POR_ELIPSE, 4);
+    desenhaCilindroLateral(obstaculo_raio, obstaculo_altura, PONTOS_POR_ELIPSE, (idTexturaParedes_ != 0));
 
     if (idTexturaParedes_ != 0)
         glDisable(GL_TEXTURE_2D);
@@ -48,12 +79,8 @@ void Obstaculo3d::desenha()
         glColor3f(obstaculo_cor.x(), obstaculo_cor.y(), obstaculo_cor.z());
         GLfloat mat[4] = { obstaculo_cor.x(), obstaculo_cor.y(), obstaculo_cor.z(), 1.0f };
         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
-        gluQuadricTexture(quad, GL_FALSE);
-        gluDisk(quad, 0.0, obstaculo_raio, PONTOS_POR_ELIPSE, 1);
-        gluQuadricTexture(quad, GL_TRUE);
+        desenhaDisco(obstaculo_raio, PONTOS_POR_ELIPSE);
     }
-
-    gluDeleteQuadric(quad);
 
     glPopMatrix();
 }
