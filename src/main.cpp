@@ -4,10 +4,8 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
-#include <fstream>
 #include <math.h>
 #include <cstring>
-#include <cstdio>
 #include <stdlib.h>
 #include <list>
 
@@ -142,13 +140,6 @@ void mouse_move(int x, int y);
 
 void coleta_dados_arena();
 void desenhaChaoAzul();
-
-// Log de debug para análise em máquinas onde obstáculos não aparecem (ex.: WSL).
-// Grava em obstaculo_debug.log no diretório atual (NDJSON, uma linha por evento).
-static void obst_debug_log(long t_ms, const char* ev, const char* data_json) {
-    std::ofstream f("obstaculo_debug.log", std::ios::app);
-    if (f) { f << "{\"t\":" << t_ms << ",\"ev\":\"" << ev << "\",\"data\":" << data_json << "}\n"; f.close(); }
-}
 void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r, float g, float b, float alpha);
 
 GLuint geraTexturaDifusaParedes();
@@ -230,9 +221,6 @@ int main(int argc, char *argv[])
 
     // Inicializa jogo
     inicializacao();
-
-    // Debug: log do estado após init (para análise quando obstáculos não aparecem noutra máquina)
-    { char buf[256]; std::snprintf(buf, sizeof(buf), "{\"dadosArenaSVG_ok\":%d,\"obstaculos_size\":%zu,\"tex_parede_id\":%u}", dadosArenaSVG.ok ? 1 : 0, obstaculos.size(), (unsigned)tex_parede_id); obst_debug_log(0, "init", buf); }
 
     // Loop principal
     glutMainLoop();
@@ -347,7 +335,7 @@ void inicializacao ()
                 vec3(p.cx, 0.f, p.cy),
                 p.r,
                 PRETO,
-                alt,
+                jogador_altura_global,   // pilastras com altura do personagem (1x)
                 OBSTACULO_REPULSOR
             ));
         }
@@ -497,7 +485,6 @@ void desenhaJogador(){
         pomoDeOuro.aplicarLuz();
 
         desenhaChaoAzul();
-        { static int obst_loop = 0; if (obst_loop < 50 || obst_loop % 200 == 0) { char buf[128]; std::snprintf(buf, sizeof(buf), "{\"viewport\":0,\"obstaculos_size\":%zu,\"GL_TEXTURE_2D\":%d}", obstaculos.size(), glIsEnabled(GL_TEXTURE_2D) ? 1 : 0); obst_debug_log(glutGet(GLUT_ELAPSED_TIME), "before_obstacles", buf); } obst_loop++; }
         for (Obstaculo3d& o : obstaculos)
             o.desenha();
         if (pomoDeOuro.estaAtivo())
@@ -527,7 +514,6 @@ void desenhaJogador(){
         pomoDeOuro.aplicarLuz();
 
         desenhaChaoAzul();
-        { static int obst_loop2 = 0; if (obst_loop2 < 50 || obst_loop2 % 200 == 0) { char buf[128]; std::snprintf(buf, sizeof(buf), "{\"viewport\":1,\"obstaculos_size\":%zu,\"GL_TEXTURE_2D\":%d}", obstaculos.size(), glIsEnabled(GL_TEXTURE_2D) ? 1 : 0); obst_debug_log(glutGet(GLUT_ELAPSED_TIME), "before_obstacles", buf); } obst_loop2++; }
         for (Obstaculo3d& o : obstaculos)
             o.desenha();
         if (pomoDeOuro.estaAtivo())
@@ -554,9 +540,6 @@ ControladorJogo& getControladorJogo()
 
 void display(void)
 {
-    // Debug: primeiros frames e amostragem (para análise em máquina onde obstáculos não aparecem)
-    { static int frame = 0; long t = glutGet(GLUT_ELAPSED_TIME); if (frame < 80 || frame % 300 == 0) { char buf[128]; std::snprintf(buf, sizeof(buf), "{\"updateDrawing\":%d,\"frame\":%d}", updateDrawing ? 1 : 0, frame); obst_debug_log(t, "display", buf); } frame++; }
-
     // Sempre desenha e troca buffers (evita tela vazia em hardware lento/WSL onde
     // muitos display() podem rodar antes do primeiro idle() setar updateDrawing).
     if (updateDrawing) {
