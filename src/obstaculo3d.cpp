@@ -1,6 +1,8 @@
 #include "../lib/obstaculo3d.h"
 #include "../lib/config.h"
 #include <cmath>
+#include <fstream>
+#include <cstdio>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -8,8 +10,20 @@
 
 GLuint Obstaculo3d::idTexturaParedes_ = 0;
 
+// Log de debug (mesmo arquivo que main.cpp) para análise quando obstáculos não aparecem.
+static void obst_desenha_log(unsigned idTex, int callIndex) {
+    std::ofstream f("obstaculo_debug.log", std::ios::app);
+    if (f) {
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "{\"idTexturaParedes\":%u,\"call\":%d}", idTex, callIndex);
+        f << "{\"t\":0,\"ev\":\"obst_desenha\",\"data\":" << buf << "}\n";
+        f.close();
+    }
+}
+
 void Obstaculo3d::desenha()
 {
+    { static int call_count = 0; call_count++; if (call_count <= 30 || call_count % 100 == 0) obst_desenha_log((unsigned)idTexturaParedes_, call_count); }
     glPushMatrix();
 
     // obstaculo_pos = centro da base do cilindro; eixo ao longo Y (altura)
