@@ -29,7 +29,10 @@ extern bool forcar_zero_emissao;
 #define  VIEWPORT_LARGURA  (GLint) 500
 #define  VIEWPORT_ALTURA   (GLint) 500
 
+/** Velocidade do jogador ao andar (unidades por segundo). Multiplicada pelo delta de tempo para ser independente da taxa de quadros. */
+#define JOGADOR_VELOCIDADE (GLfloat) 125.0
 #define JOGADOR_VEL_DIRECIONAL (GLfloat) 125
+/** Velocidade angular de rotação do jogador (graus por segundo). */
 #define JOGADOR_VEL_ANGULAR (GLfloat) 135
 #define JOGADOR_VEL_ANIMACAO (GLfloat) 360
 #define JOGADOR_PROP_PARADA 1.01
@@ -39,7 +42,16 @@ extern bool forcar_zero_emissao;
 
 #define JOGADOR_ALTURA (GLfloat) 80.0
 
+/** Gravidade (unidades/s²). */
+#define GRAVIDADE (GLfloat) JOGADOR_ALTURA
+/** Altura máxima do pulo (pés do jogador) = 2x a altura do personagem; limitado na gravidade(). */
+#define PULO_ALTURA_MAXIMA (GLfloat) (2.0 * JOGADOR_ALTURA)
+/** Velocidade vertical inicial (atinge 2*H); limite rígido em PULO_ALTURA_MAXIMA garante que não passe. */
+#define VELOCIDADE_PULO_INICIAL (GLfloat) (2.0 * GRAVIDADE)
+
 #define OBSTACULO_ALTURA_MULTIPLICADOR 4
+/** Altura do teto da arena (pés do jogador não podem fazer a cabeça passar desse valor). */
+#define TETO_ARENA_ALTURA (GLfloat) (OBSTACULO_ALTURA_MULTIPLICADOR * JOGADOR_ALTURA)
 
 #define ARENA_RAIO_PADRAO (GLfloat) 250
 #define ARENA_X_PADRAO (GLfloat) 0

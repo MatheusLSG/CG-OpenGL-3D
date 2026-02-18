@@ -1,7 +1,31 @@
 #include "../lib/jogador3d.h"
-#include "../lib/config.h" 
+#include "../lib/config.h"
 #include "../lib/obstaculo3d.h"
 #include <GL/gl.h>
+#include <cmath>
+
+/** Distância no plano XZ entre dois pontos. */
+static GLfloat _dist_xz(const vec3& a, const vec3& b) {
+    GLfloat dx = a.x() - b.x();
+    GLfloat dz = a.z() - b.z();
+    return std::sqrt(dx * dx + dz * dz);
+}
+
+/** Nível do chão em (x,z): 0 ou topo de pilastras/outro jogador sob o ponto. */
+static GLfloat _get_ground_level(GLfloat x, GLfloat z, GLfloat raio_jogador,
+                                 const std::list<Obstaculo3d>& obstaculos,
+                                 const Jogador3d* outro) {
+    GLfloat ground = 0.f;
+    vec3 p(x, 0.f, z);
+    for (const Obstaculo3d& o : obstaculos) {
+        if (o.tipo() != OBSTACULO_REPULSOR) continue;
+        if (_dist_xz(p, o.pos()) <= o.raio() + raio_jogador)
+            ground = std::max(ground, o.pos().y() + o.altura());
+    }
+    if (outro && _dist_xz(p, outro->pos()) <= raio_jogador + outro->raio())
+        ground = std::max(ground, outro->pos().y() + JOGADOR_ALTURA);
+    return ground;
+}
 
 void Jogador3d::atualiza_animacao()
 {
@@ -31,12 +55,8 @@ void Jogador3d::atualiza_animacao()
 
     
     
-    if (aux && jogador_estado_atual == PULANDO)
-    {
-        jogador_estado_atual = CAINDO;
-        
-    }
-    else if (aux && jogador_anim_atual== ATACANDO)
+    /* PULANDO/CAINDO são controlados pela gravidade em gravidade(), não pela animação */
+    if (aux && jogador_anim_atual== ATACANDO)
     {
         jogador_estado_atual = PARADO;
         
@@ -145,52 +165,141 @@ void Jogador3d::desenha_tiros()
 
 void Jogador3d::move(GLfloat s_dif)
 {
-    
+    if (esta_no_ar()) {
+        jogador_movimento_ar = (int)s_dif;  /* no ar: só guarda intenção para fazer arco (frente/trás) */
+        return;
+    }
+    jogador_movimento_ar = 0;
     if (s_dif == 1)
-    {
         jogador_estado_atual = ANDANDOFRENTE;
-    }
-
-    if (s_dif == 2)
-    {
+    else if (s_dif == 2)
         jogador_estado_atual = CORRENDOFRENTE;
-    }
-
-    if (s_dif == -1)
-    {
+    else if (s_dif == -1)
         jogador_estado_atual = ANDANDOTRAS;
-    }
-
-    if (s_dif == -2)
-    {
+    else if (s_dif == -2)
         jogador_estado_atual = CORRENDOTRAS;
+}
+
+void Jogador3d::atualiza_movimento(GLdouble time_dif)
+{
+    GLfloat passo = (GLfloat)(JOGADOR_VELOCIDADE * (time_dif / 1000.0));
+    vec3 desl(0, 0, 0);
+
+    if (esta_no_ar() && jogador_movimento_ar != 0) {
+        /* No ar: permite andar para frente/trás e fazer arco no pulo */
+        if (jogador_movimento_ar > 0)
+            desl = passo * jogador_dir;
+        else
+            desl = -passo * jogador_dir;
+        jogador_pos += desl;
+        jogador_arma_pos.e[0] = jogador_pos.x();
+        jogador_arma_pos.e[2] = jogador_pos.z();
+        return;
     }
 
-    
+    switch (jogador_estado_atual) {
+        case ANDANDOFRENTE:
+        case CORRENDOFRENTE:
+            desl = passo * jogador_dir;
+            break;
+        case ANDANDOTRAS:
+        case CORRENDOTRAS:
+            desl = -passo * jogador_dir;
+            break;
+        default:
+            return;
+    }
+
+    jogador_pos += desl;
+    jogador_arma_pos.e[0] = jogador_pos.x();
+    jogador_arma_pos.e[2] = jogador_pos.z();
 }
 
 void Jogador3d::para()
 {
-    jogador_estado_atual = PARADO;
+    if (esta_no_ar())
+        jogador_movimento_ar = 0;
+    else
+        jogador_estado_atual = PARADO;
 }
 
 void Jogador3d::pula()
 {
-    if (jogador_estado_atual != CAINDO)
-    {
+    if (!esta_no_ar()) {
+        jogador_y_inicio_pulo = jogador_pos.y();
+        jogador_vy = VELOCIDADE_PULO_INICIAL;
         jogador_estado_atual = PULANDO;
     }
-   
 }
 
-void Jogador3d::gravidade(GLfloat t_dif)
+void Jogador3d::pula_soltar()
 {
+    if (jogador_estado_atual == PULANDO && jogador_vy > 0.f)
+        jogador_vy = 0.f;
+}
 
+bool Jogador3d::esta_no_ar() const
+{
+    return jogador_estado_atual == PULANDO || jogador_estado_atual == CAINDO;
+}
+
+void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculos, const Jogador3d* outro)
+{
+    GLfloat ground = _get_ground_level(jogador_pos.x(), jogador_pos.z(), jogador_raio, obstaculos, outro);
+
+    if (!esta_no_ar()) {
+        if (jogador_pos.y() > ground + 1e-3f) {
+            jogador_estado_atual = CAINDO;
+            jogador_vy = 0.f;
+        } else {
+            return;
+        }
+    }
+
+    jogador_vy -= GRAVIDADE * (GLfloat)t_dif;
+    jogador_pos.e[1] += jogador_vy * (GLfloat)t_dif;
+    jogador_arma_pos.e[1] = jogador_pos.y();
+
+    /* Limite do pulo: 2x a altura do personagem em relação ao chão de onde pulou */
+    GLfloat pulo_teto_y = jogador_y_inicio_pulo + PULO_ALTURA_MAXIMA;
+    if (jogador_pos.y() > pulo_teto_y) {
+        jogador_pos.e[1] = pulo_teto_y;
+        jogador_arma_pos.e[1] = pulo_teto_y;
+        jogador_vy = 0.f;
+        jogador_estado_atual = CAINDO;
+    }
+
+    /* Teto da arena: cabeça (y + JOGADOR_ALTURA) não pode passar do teto (4x altura do personagem) */
+    GLfloat teto_max_y = TETO_ARENA_ALTURA - JOGADOR_ALTURA;
+    if (jogador_pos.y() > teto_max_y) {
+        jogador_pos.e[1] = teto_max_y;
+        jogador_arma_pos.e[1] = teto_max_y;
+        jogador_vy = 0.f;
+        jogador_estado_atual = CAINDO;
+    }
+
+    if (jogador_vy <= 0.f && jogador_pos.y() <= ground + 1e-2f) {
+        jogador_pos.e[1] = ground;
+        jogador_arma_pos.e[1] = ground;
+        jogador_vy = 0.f;
+        jogador_estado_atual = PARADO;
+    } else if (jogador_vy < 0.f && jogador_estado_atual == PULANDO) {
+        jogador_estado_atual = CAINDO;
+    }
 }
 
 void Jogador3d::gira_corpo(GLfloat theta_dif)
 {
+    Jogador_theta += theta_dif;
+    jogador_dir = rotacao3Dy(Jogador_theta, vec3(0, 0, 1));
+}
 
+void Jogador3d::set_pos_xz(GLfloat x, GLfloat z)
+{
+    jogador_pos.e[0] = x;
+    jogador_pos.e[2] = z;
+    jogador_arma_pos.e[0] = x;
+    jogador_arma_pos.e[2] = z;
 }
 
 void Jogador3d::gira_arma(GLfloat theta_dif, GLfloat phi_dif)
@@ -203,19 +312,92 @@ void Jogador3d::atira()
     jogador_estado_atual = ATACANDO;
 }
 
-bool Jogador3d::verifica_colisao_inimigo(const Jogador3d& inimigo)
+bool Jogador3d::verifica_colisao_inimigo(const Jogador3d& inimigo) const
 {
-
+    GLfloat d = _dist_xz(jogador_pos, inimigo.pos());
+    return d < jogador_raio + inimigo.raio();
 }
 
-bool Jogador3d::verifica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos)
+bool Jogador3d::verifica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos) const
 {
-
+    for (const Obstaculo3d& o : obstaculos) {
+        if (o.tipo() != OBSTACULO_REPULSOR) continue;
+        GLfloat d = _dist_xz(jogador_pos, o.pos());
+        if (d < jogador_raio + o.raio())
+            return true;
+    }
+    return false;
 }
 
-bool Jogador3d::verifica_colisao_arena()
+bool Jogador3d::verifica_colisao_arena(vec3 centro_arena, GLfloat raio_arena) const
 {
+    GLfloat d = _dist_xz(jogador_pos, centro_arena);
+    return d + jogador_raio > raio_arena;
+}
 
+void Jogador3d::aplica_colisao_arena(vec3 centro_arena, GLfloat raio_arena)
+{
+    GLfloat d = _dist_xz(jogador_pos, centro_arena);
+    if (d < 1e-6f) return;
+    GLfloat limite = raio_arena - jogador_raio - COLISAO_MARGEM;
+    if (limite <= 0.f) return;
+    if (d > limite) {
+        GLfloat f = limite / d;
+        jogador_pos.e[0] = centro_arena.x() + (jogador_pos.x() - centro_arena.x()) * f;
+        jogador_pos.e[2] = centro_arena.z() + (jogador_pos.z() - centro_arena.z()) * f;
+        jogador_arma_pos.e[0] = jogador_pos.x();
+        jogador_arma_pos.e[2] = jogador_pos.z();
+    }
+}
+
+void Jogador3d::aplica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos)
+{
+    const GLfloat eps_em_cima = 2.0f;  /* margem para considerar "em cima" do obstáculo */
+    for (const Obstaculo3d& o : obstaculos) {
+        if (o.tipo() != OBSTACULO_REPULSOR) continue;
+        GLfloat d = _dist_xz(jogador_pos, o.pos());
+        GLfloat soma_raios = jogador_raio + o.raio() + COLISAO_MARGEM;
+        if (d < 1e-6f) continue;
+        if (d < soma_raios) {
+            /* Pilastra: se o jogador está em cima (pés >= topo da pilastra), permite ficar em cima */
+            GLfloat topo_pilastra = o.pos().y() + o.altura();
+            if (jogador_pos.y() >= topo_pilastra - eps_em_cima)
+                continue;  /* não empurra em XZ; jogador pode ficar em cima da pilastra */
+            GLfloat f = soma_raios / d;
+            jogador_pos.e[0] = o.pos().x() + (jogador_pos.x() - o.pos().x()) * f;
+            jogador_pos.e[2] = o.pos().z() + (jogador_pos.z() - o.pos().z()) * f;
+            jogador_arma_pos.e[0] = jogador_pos.x();
+            jogador_arma_pos.e[2] = jogador_pos.z();
+        }
+    }
+}
+
+void Jogador3d::aplica_colisao_inimigo(Jogador3d& outro)
+{
+    GLfloat d = _dist_xz(jogador_pos, outro.pos());
+    GLfloat soma_raios = jogador_raio + outro.raio() + COLISAO_MARGEM;
+    if (d < 1e-6f) return;
+    if (d >= soma_raios) return;
+
+    const GLfloat eps_em_cima = 2.0f;
+    GLfloat meu_topo = jogador_pos.y() + JOGADOR_ALTURA;
+    GLfloat topo_outro = outro.pos().y() + JOGADOR_ALTURA;
+    /* Se um está em cima do outro, não empurra em XZ (permite subir em cima) */
+    if (jogador_pos.y() >= topo_outro - eps_em_cima) return;  /* este está em cima do outro */
+    if (outro.pos().y() >= meu_topo - eps_em_cima) return;   /* o outro está em cima deste */
+
+    GLfloat overlap = soma_raios - d;
+    GLfloat dx = (jogador_pos.x() - outro.pos().x()) / d;
+    GLfloat dz = (jogador_pos.z() - outro.pos().z()) / d;
+    GLfloat metade = overlap * 0.5f;
+    jogador_pos.e[0] += dx * metade;
+    jogador_pos.e[2] += dz * metade;
+    jogador_arma_pos.e[0] = jogador_pos.x();
+    jogador_arma_pos.e[2] = jogador_pos.z();
+    outro.set_pos_xz(
+        outro.pos().x() - dx * metade,
+        outro.pos().z() - dz * metade
+    );
 }
 
 

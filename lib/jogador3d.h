@@ -39,6 +39,10 @@ class Jogador3d
     int     jogador_flag_anim;
     int     jogador_inv;
 
+    GLfloat jogador_vy;  /**< Velocidade vertical (unidades/s); positivo = subindo. */
+    GLfloat jogador_y_inicio_pulo; /**< Y do chão quando iniciou o pulo (limite de altura é relativo a isso). */
+    int     jogador_movimento_ar;  /**< No ar: 1/2=frente, -1/-2=trás, 0=não mover (permite arco no pulo). */
+
     std::list<Tiro*> tiros;
 
 public:
@@ -51,7 +55,7 @@ public:
         jogador_vida        {VIDAS_INICIAL},
         jogador_raio        {ini_jogador_raio},
         jogador_pos         {ini_jogador_pos},
-        jogador_dir         {rotacao3Dz(ini_jogador_theta, vec3(1,0,0))},
+        jogador_dir         {rotacao3Dy(ini_jogador_theta, vec3(0,0,1))},
         Jogador_theta       {ini_jogador_theta},
         jogador_modelo      {animacoes},
         jogador_estado_atual{PARADO},
@@ -63,6 +67,9 @@ public:
         jogador_tiro_cor    {ini_jogador_tiro_cor},
         jogador_flag_anim   {1},
         jogador_inv         {0},
+        jogador_vy          {0},
+        jogador_y_inicio_pulo{0},
+        jogador_movimento_ar{0},
         tiros               {std::list<Tiro*>()}
     {}
 
@@ -79,6 +86,9 @@ public:
     GLfloat altura() const { return JOGADOR_ALTURA; }
     GLint vidas() const { return jogador_vida; }
 
+    /** @brief Ajusta a posição no plano XZ (usado pela resolução de colisões). */
+    void set_pos_xz(GLfloat x, GLfloat z);
+
     std::list<Tiro*>& retorna_tiros() { return tiros; }
 
     /**
@@ -94,36 +104,55 @@ public:
      * @param s_dif 1 = andar frente, 2 = correr frente, -1 = andar trás, -2 = correr trás.
      */
     void move(GLfloat s_dif);
+    /**
+     * @brief Aplica o deslocamento do jogador conforme estado atual e delta de tempo (ms).
+     * Usa JOGADOR_VELOCIDADE * (time_dif/1000) para ser independente da taxa de quadros.
+     */
+    void atualiza_movimento(GLdouble time_dif);
     /** @brief Para o movimento (estado PARADO). */
     void para();
-    /** @brief Inicia o pulo (estado PULANDO) se não estiver caindo. */
+    /** @brief Inicia o pulo (estado PULANDO) se não estiver no ar. */
     void pula();
-    /** @brief Aplica gravidade; delta de tempo em segundos. */
-    void gravidade(GLfloat t_dif);
+    /** @brief Solta o pulo: se estiver subindo, começa a descer (altura variável). */
+    void pula_soltar();
+    /** @brief Retorna true se estiver PULANDO ou CAINDO. */
+    bool esta_no_ar() const;
+    /** @brief Aplica gravidade e pouso; t_dif em segundos, obstaculos e outro jogador para nível do chão. */
+    void gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculos, const Jogador3d* outro = nullptr);
     /** @brief Gira o corpo do jogador (ângulo em graus). */
     void gira_corpo(GLfloat theta_dif);
     /** @brief Gira a arma (ângulos theta e phi em graus). */
     void gira_arma(GLfloat theta_dif, GLfloat phi_dif);
     /** @brief Dispara um tiro (estado ATACANDO). */
     void atira();
-    /** @brief Retorna true se este jogador colide com o inimigo. */
-    bool verifica_colisao_inimigo(const Jogador3d& inimigo);
-    /** @brief Retorna true se colide com algum obstáculo da lista. */
-    bool verifica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos);
-    /** @brief Retorna true se está fora da arena (colisão com borda). */
-    bool verifica_colisao_arena();
+    /** @brief Retorna true se este jogador colide (sobrepõe) com o inimigo no plano XZ. */
+    bool verifica_colisao_inimigo(const Jogador3d& inimigo) const;
+    /** @brief Retorna true se colide com algum obstáculo da lista (plano XZ). */
+    bool verifica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos) const;
+    /** @brief Retorna true se está fora da arena (centro + raio no plano XZ). */
+    bool verifica_colisao_arena(vec3 centro_arena, GLfloat raio_arena) const;
+
+    /** @brief Corrige posição para ficar dentro da arena (atrator: moonwalk na parede). */
+    void aplica_colisao_arena(vec3 centro_arena, GLfloat raio_arena);
+    /** @brief Corrige posição para não penetrar pilastras (repulsores). */
+    void aplica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos);
+    /** @brief Separa este jogador e o outro (repulsor mútuo). */
+    void aplica_colisao_inimigo(Jogador3d& outro);
 
     /**
      * @brief Reduz uma vida do jogador. O placar deve ser notificado em seguida.
      */
     void dano();
-    void resetar_vidas() 
-    { 
-        jogador_vida = VIDAS_INICIAL;  
-        jogador_flag_anim = 1; 
+    void resetar_vidas()
+    {
+        jogador_vida = VIDAS_INICIAL;
+        jogador_flag_anim = 1;
         jogador_modelo.drawInit(PARADO);
         jogador_estado_atual = PARADO;
         jogador_inv = 0;
+        jogador_vy = 0;
+        jogador_y_inicio_pulo = 0;
+        jogador_movimento_ar = 0;
     }
 };
 

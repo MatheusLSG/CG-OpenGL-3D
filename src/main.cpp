@@ -62,6 +62,10 @@ GLfloat jogador_altura_global = JOGADOR_ALTURA;
 // teclas
 int teclas[512];
 
+/** Pulo: só permite novo pulo após soltar a tecla (máquina de estados). */
+static bool pulo_tecla_liberada_harry = true;
+static bool pulo_tecla_liberada_draco = true;
+
 // mouse
 GLfloat mouse_pass = 0;
 GLfloat mouse_mov = 0;
@@ -108,6 +112,8 @@ int harryIdle = -1;
 int currentTime = 0;
 int lastTime = 0;
 int updateDrawing = 0;
+// Delta de tempo (ms) para movimento independente da taxa de quadros
+static GLdouble previousTime = 0;
 
 //Controles gerais
 int zoom = 150;
@@ -137,6 +143,7 @@ void reinicia_flags();
 
 void pressionar_teclas(unsigned char tecla, int x, int y);
 void soltar_teclas(unsigned char tecla, int x, int y);
+void keyUp(unsigned char key, int x, int y);
 
 void mouse_press(int botao, int estado, int x, int y);
 void mouse_move(int x, int y);
@@ -202,6 +209,8 @@ int main(int argc, char *argv[])
     glutMotionFunc(mouse_motion);
     glutMouseFunc(mouse);
     glutKeyboardFunc(keyPress);
+    glutKeyboardUpFunc(keyUp);
+    glutIgnoreKeyRepeat(1);  /* evita key repeat: segurar x/. não gera vários keyPress nem keyUp falso */
 
     // inicializa cena
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
@@ -230,17 +239,6 @@ int main(int argc, char *argv[])
     
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
 
 void inicializacao ()
 {
@@ -501,10 +499,20 @@ void desenhaJogador(){
         for (int i = 0; i < 8; i++) glDisable((GLenum)(GL_LIGHT0 + i));
     }
 
-    // Viewport Harry
+    /* Offset da câmera (zoom e ângulos); rotação da câmera é independente dos personagens (mouse). */
+    GLfloat ex = (GLfloat)(zoom*sin(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
+    GLfloat ey = (GLfloat)(zoom*sin(camXYAngle*M_PI/180));
+    GLfloat ez = (GLfloat)(zoom*cos(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
+
+    // Viewport Harry: câmera acompanha Harry (olhar fixo no personagem, sem girar com ele)
     glViewport(0, 0, janela_largura/2, janela_altura);
     glPushMatrix();
-        glTranslatef(0, 0, -200);
+        glLoadIdentity();
+        {
+            vec3 h = jHarry.pos();
+            gluLookAt(h.x()+ex, h.y()+ey, h.z()+ez, h.x(), h.y(), h.z(), 0.f, 1.f, 0.f);
+        }
+        glTranslatef(0.f, -40.f, 0.f);
         pomoDeOuro.aplicarLuz();
 
         desenhaChaoAzul();
@@ -519,20 +527,17 @@ void desenhaJogador(){
             jDraco.desenha_jogador();
 
             if (coordsysToggle == 1)  DrawAxes(83);
-    
+
         glPopMatrix();
-            
-    // Viewport Draco: mesma câmera, centrada no Draco
+
+    // Viewport Draco: câmera acompanha Draco (olhar fixo no personagem, sem girar com ele)
     glViewport(janela_largura/2, 0, janela_largura/2, janela_altura);
     glPushMatrix();
         glLoadIdentity();
         {
-            GLfloat ex = (GLfloat)(zoom*sin(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
-            GLfloat ey = (GLfloat)(zoom*sin(camXYAngle*M_PI/180));
-            GLfloat ez = (GLfloat)(zoom*cos(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
-            gluLookAt(ex, ey, ez, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+            vec3 d = jDraco.pos();
+            gluLookAt(d.x()+ex, d.y()+ey, d.z()+ez, d.x(), d.y(), d.z(), 0.f, 1.f, 0.f);
         }
-        glTranslatef(-jDraco.pos().x(), -jDraco.pos().y(), -jDraco.pos().z());
         glTranslatef(0.f, -40.f, 0.f);
         pomoDeOuro.aplicarLuz();
 
@@ -575,19 +580,9 @@ void display(void)
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    //Controla camera
-        //Limpa a cor com azulado
     glClearColor (0.30, 0.30, 1.0, 0.0);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //Utiliza uma esfera de raio zoom para guiar a posicao da camera
-        //baseada em dois angulos (do plano XZ e do plano XY)
-    gluLookAt(  zoom*sin(camXZAngle*M_PI/180)*cos((camXYAngle*M_PI/180)),
-                zoom*                         sin((camXYAngle*M_PI/180)),
-                zoom*cos(camXZAngle*M_PI/180)*cos((camXYAngle*M_PI/180)),
-                0, 0, 0,
-                0, 1, 0);
 
-    
     desenhaJogador();
 
     getControladorJogo().desenharHUD();
@@ -595,8 +590,38 @@ void display(void)
     glutSwapBuffers ();
 }
 
+void keyUp(unsigned char key, int x, int y)
+{
+    if ((unsigned int)key < 512)
+        teclas[key] = 0;
+    if ((unsigned int)key == 0xE7)
+        teclas[0xE7] = 0;
+    if (key == 'x') {
+        jHarry.pula_soltar();
+        pulo_tecla_liberada_harry = true;  /* só libera para próximo pulo quando realmente soltou */
+    }
+    if (key == '.') {
+        jDraco.pula_soltar();
+        pulo_tecla_liberada_draco = true;
+    }
+    glutPostRedisplay();
+}
+
 void keyPress(unsigned char key, int x, int y)
 {
+    /* Pulo: só se a tecla foi liberada antes (soltar e apertar de novo) e está no chão */
+    if (key == 'x' && pulo_tecla_liberada_harry && !jHarry.esta_no_ar()) {
+        jHarry.pula();
+        pulo_tecla_liberada_harry = false;  /* segurando: não dar outro pulo até keyUp */
+    }
+    if (key == '.' && pulo_tecla_liberada_draco && !jDraco.esta_no_ar()) {
+        jDraco.pula();
+        pulo_tecla_liberada_draco = false;
+    }
+
+    if ((unsigned int)key < 512)
+        teclas[key] = 1;
+
     ControladorJogo& controladorJogo = getControladorJogo();
 
     switch(key){
@@ -632,41 +657,11 @@ void keyPress(unsigned char key, int x, int y)
     case 'N':
         pomoDeOuro.alternarAtivo();
         break;
-    case 'd':
-        if (jDraco.vidas() > 0 && controladorJogo.getEstado() == EM_PARTIDA) {
-            int vidasAntes = jDraco.vidas();
-            jDraco.dano();
-            if (vidasAntes == 1)
-            {
-                jHarry.ganha();
-            }
-
-            placar.notificarDanoDireita(vidasAntes);
-        }
-        break;
-    case 'h':
-        if (jHarry.vidas() > 0 && controladorJogo.getEstado() == EM_PARTIDA) {
-            int vidasAntes = jHarry.vidas();
-            jHarry.dano();
-            if (vidasAntes == 1)
-            {
-                jDraco.ganha();
-            }
-            
-            placar.notificarDanoEsquerda(vidasAntes);
-        }
-        break;
-    case 'a':
-        armaToggle = !armaToggle;
-        break;
     case 'c':
         coordsysToggle = !coordsysToggle;
         break;
     case 'm':
         lookatToggle = !lookatToggle;
-        break;
-    case 's':
-        flag_swap = !flag_swap;
         break;
     case '+':
         zoom++;
@@ -677,6 +672,8 @@ void keyPress(unsigned char key, int x, int y)
     case 'r':
     case 'R':
         controladorJogo.resetarJogo();
+        pulo_tecla_liberada_harry = true;
+        pulo_tecla_liberada_draco = true;
         break;
     case 27 :
          exit(0);
@@ -711,15 +708,65 @@ void mouse_motion(int x, int y)
 
 void idle()
 {
-    // Elapsed time from the initiation of the game.
-    currentTime = glutGet(GLUT_ELAPSED_TIME);
+    GLdouble currentTimeElapsed = (GLdouble)glutGet(GLUT_ELAPSED_TIME);
+    if (previousTime == 0)
+        previousTime = currentTimeElapsed;
+    GLdouble timeDiference = currentTimeElapsed - previousTime;
+    previousTime = currentTimeElapsed;
 
+    /* Movimento: estado a partir das teclas */
+    if (teclas['w'])
+        jHarry.move(1);
+    else if (teclas['s'])
+        jHarry.move(-1);
+    else
+        jHarry.para();
+
+    if (teclas['o'])
+        jDraco.move(1);
+    else if (teclas['l'])
+        jDraco.move(-1);
+    else
+        jDraco.para();
+
+    jHarry.atualiza_movimento(timeDiference);
+    jDraco.atualiza_movimento(timeDiference);
+
+    /* Resolução de colisões: arena (atrator), pilastras (repulsores), jogador vs jogador */
+    if (dadosArenaSVG.ok) {
+        vec3 centro_arena((GLfloat)dadosArenaSVG.arena_cx, 0.f, (GLfloat)dadosArenaSVG.arena_cy);
+        GLfloat raio_arena = (GLfloat)dadosArenaSVG.arena_r;
+        jHarry.aplica_colisao_arena(centro_arena, raio_arena);
+        jDraco.aplica_colisao_arena(centro_arena, raio_arena);
+    }
+    jHarry.aplica_colisao_obstaculos(obstaculos);
+    jDraco.aplica_colisao_obstaculos(obstaculos);
+    jHarry.aplica_colisao_inimigo(jDraco);
+
+    GLdouble segundos = timeDiference / 1000.0;
+    jHarry.gravidade((GLfloat)segundos, obstaculos, &jDraco);
+    jDraco.gravidade((GLfloat)segundos, obstaculos, &jHarry);
+
+    /* Rotação apenas no chão (no ar só frente/trás) */
+    if (teclas['a'] && !jHarry.esta_no_ar())
+        jHarry.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
+    if (teclas['d'] && !jHarry.esta_no_ar())
+        jHarry.gira_corpo((GLfloat)(JOGADOR_VEL_ANGULAR * segundos));
+    if (teclas['k'] && !jDraco.esta_no_ar())
+        jDraco.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
+    if (teclas[0xE7] && !jDraco.esta_no_ar())
+        jDraco.gira_corpo((GLfloat)(JOGADOR_VEL_ANGULAR * segundos));
+
+    currentTime = (int)currentTimeElapsed;
     int fatorTempo = 33;
-    if (currentTime - lastTime > fatorTempo){
+    if (currentTime - lastTime > fatorTempo) {
         lastTime = currentTime;
         updateDrawing = 1;
+        /* Zoom contínuo ao segurar + ou - (key repeat desligado para o pulo; aplicamos aqui) */
+        if (teclas['+']) zoom++;
+        if (teclas['-']) zoom--;
     }
-    
+
     glutPostRedisplay();
 }
 /*

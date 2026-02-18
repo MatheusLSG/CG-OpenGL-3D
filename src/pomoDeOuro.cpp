@@ -37,8 +37,8 @@ void PomoDeOuro::atualizar(const DadosArenaSVG* dadosArena, GLfloat alturaArena)
     GLfloat centro_z = (GLfloat)dadosArena->arena_cy;  /* DadosArenaSVG: arena_cy = z no mundo 3D */
     GLfloat raio_orbita = 0.8f * r;
     GLfloat centro_y = 0.5f * alturaArena;
-    GLfloat amp_y = 0.15f * r;
-    const GLfloat omega_vertical = 1.3f;
+    GLfloat amp_y = 0.30f * r;
+    const GLfloat omega_vertical = 2.6f;
 
     posicao_[0] = centro_x + raio_orbita * cosf(t);
     posicao_[2] = centro_z + raio_orbita * sinf(t);
