@@ -83,6 +83,7 @@ GLuint tex_parede_id = 0;
 bool flag_col_tiros = PERMITE_COLISAO_ENTRE_TIROS;
 int flag_ganhador = 0;
 int flag_perspectiva = 1;
+int flag_lanterna = 0;
 
 // OLD:
 
@@ -147,10 +148,11 @@ void renderiza_texto_esquerda(vec3 pos, cor cor_texto, char *texto);
 void renderiza_texto_centro(vec3 pos, cor cor_texto, char *texto);
 
 
-void cameraTerceiraPessoaDraco();
-void cameraTerceiraPessoaHarry();
+void camera_terceira_pessoa_draco();
+void camera_terceira_pessoa_harry();
 
-//OLD
+void configura_lanterna(int luz, GLfloat luz_difusa[4], GLfloat luz_especular[4] );
+
 void mouse(int button, int state, int x, int y);
 void mouse_motion(int x, int y);
 void display();
@@ -272,9 +274,14 @@ void inicializacao ()
         vec3(maoDraco.x, maoDraco.y, maoDraco.z), 
         VERDE,
         RAIO_TIRO,
+        GL_LIGHT2,
         draco
     );
 
+    GLfloat verde[] = {0.5f, 1.0f, 0.5f, 1.0f};
+    configura_lanterna(GL_LIGHT2, verde, verde);
+
+    // HARRY ----------------------------------------------------------------
     meshes harry;
     
     harry.loadMeshAnim("resources/harry/idle/idle####.obj", 192, 1);
@@ -317,9 +324,14 @@ void inicializacao ()
         vec3(maoHarry.x, maoHarry.y, maoHarry.z),
         VERMELHO,
         RAIO_TIRO,
+        GL_LIGHT1,
         harry
     );
+    
+    GLfloat vermelho[] = {1.0f, 0.5f, 0.5f, 1.0f};
+    configura_lanterna(GL_LIGHT1, vermelho, vermelho);
 
+    // ARENA -----------------------------
     if (dadosArenaSVG.ok) {
         obstaculos.clear();
         GLfloat alt = OBSTACULO_ALTURA_MULTIPLICADOR * jogador_altura_global;
@@ -499,8 +511,8 @@ void desenhaMundo(int flag_harry, int flag_draco){
     
     glEnable(GL_ALPHA_TEST);
         glAlphaFunc(GL_GREATER, 0.5f);
-        if(flag_harry) jHarry.desenha_jogador();
-        if(flag_draco) jDraco.desenha_jogador();
+        if(flag_harry) jHarry.desenha_jogador(flag_lanterna);
+        if(flag_draco) jDraco.desenha_jogador(flag_lanterna);
         jHarry.desenha_tiros();
         jDraco.desenha_tiros();
 
@@ -518,9 +530,9 @@ void desenhaJogo(){
         pomoDeOuro.atualizar(&dadosArenaSVG, OBSTACULO_ALTURA_MULTIPLICADOR * jogador_altura_global);
         forcar_zero_emissao = !pomoDeOuro.estaAtivo();
         if (!pomoDeOuro.estaAtivo()) {
-            GLfloat zero[4] = { 0.f, 0.f, 0.f, 1.f };
-            glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
-            for (int i = 0; i < 8; i++) glDisable((GLenum)(GL_LIGHT0 + i));
+            //GLfloat zero[4] = { 0.f, 0.f, 0.f, 1.f };
+            //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
+            //for (int i = 0; i < 8; i++) glDisable((GLenum)(GL_LIGHT0 + i));
         }
 
         glLoadIdentity();
@@ -530,14 +542,14 @@ void desenhaJogo(){
         glPushMatrix();
             if (flag_perspectiva)
             {
-                cameraTerceiraPessoaHarry();
+                camera_terceira_pessoa_harry();
                 desenhaMundo(1,1);        
             }
             else
             {
                 jHarry.posiciona_camera_arma();
                 desenhaMundo(0,1);
-                jHarry.desenha_arma();
+                jHarry.desenha_arma(flag_lanterna);
             }
 
 
@@ -548,14 +560,14 @@ void desenhaJogo(){
         glPushMatrix();
             if (flag_perspectiva)
             {
-                cameraTerceiraPessoaDraco();   
+                camera_terceira_pessoa_draco();   
                 desenhaMundo(1,1);     
             }
             else
             {
                 jDraco.posiciona_camera_arma();
                 desenhaMundo(1,0);
-                jDraco.desenha_arma();
+                jDraco.desenha_arma(flag_lanterna);
             }
 
 
@@ -606,6 +618,8 @@ void display(void)
     glLoadIdentity();
     glClearColor (0.30, 0.30, 1.0, 0.0);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    
 
     desenhaJogo();
 
@@ -681,7 +695,8 @@ void keyPress(unsigned char key, int x, int y)
         break;
     case 'n':
     case 'N':
-        pomoDeOuro.alternarAtivo();
+        pomoDeOuro.alternarAtivo();    
+        flag_lanterna = 1;
         break;
     case 'c':
         coordsysToggle = !coordsysToggle;
@@ -878,7 +893,7 @@ int main(int argc, char** argv)
 */
 
 
-void cameraTerceiraPessoaDraco()
+void camera_terceira_pessoa_draco()
 {
      glMatrixMode (GL_PROJECTION);
         glLoadIdentity();
@@ -895,7 +910,7 @@ void cameraTerceiraPessoaDraco()
     glTranslatef(0.f, -jDraco.altura()/2, 0.f);
 }
 
-void cameraTerceiraPessoaHarry()
+void camera_terceira_pessoa_harry()
 {
      glMatrixMode (GL_PROJECTION);
         glLoadIdentity();
@@ -956,3 +971,23 @@ void idle_tiros(std::list<Tiro3d*>& tiros_aliado, Jogador3d& inimigo, GLdouble t
         }
     }
 }
+
+void configura_lanterna(int luz, GLfloat luz_difusa[4], GLfloat luz_especular[4] ){
+    glEnable(GL_LIGHTING);
+    
+    glEnable(luz);
+
+    glLightfv(luz, GL_DIFFUSE, luz_difusa);
+    glLightfv(luz, GL_SPECULAR, luz_especular);
+
+    glLightf(luz, GL_SPOT_CUTOFF, 45.0f);
+
+    glLightf(luz, GL_SPOT_EXPONENT, 50.0f); 
+    
+    glLightf(luz, GL_CONSTANT_ATTENUATION, 1.0f);
+    glLightf(luz, GL_LINEAR_ATTENUATION, 0.05f);
+    glLightf(luz, GL_QUADRATIC_ATTENUATION, 0.001f);
+
+    glDisable(luz);
+}
+

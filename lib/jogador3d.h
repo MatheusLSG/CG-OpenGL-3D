@@ -47,6 +47,7 @@ class Jogador3d
 
     std::list<Tiro3d*> tiros;
 
+    int     jogador_luz;
 public:
     Jogador3d() {}
     Jogador3d(GLfloat ini_jogador_raio,
@@ -56,6 +57,7 @@ public:
               vec3 ini_jogador_arma_pos,
               cor ini_jogador_tiro_cor,
               GLfloat ini_jogador_tiro_raio,
+              int jogador_ini_luz,
               meshes animacoes) :
         jogador_vida        {VIDAS_INICIAL},
         jogador_raio        {ini_jogador_raio},
@@ -79,7 +81,8 @@ public:
         jogador_vy          {0},
         jogador_y_inicio_pulo{0},
         jogador_movimento_ar{0},
-        tiros               {std::list<Tiro3d*>()}
+        tiros               {std::list<Tiro3d*>()},
+        jogador_luz         (jogador_ini_luz)
     {}
 
     GLfloat pos_x() const   { return jogador_pos.x(); }
@@ -111,8 +114,8 @@ public:
      */
     void atualiza_animacao();
     /** @brief Desenha o modelo do jogador na posição e rotação atuais. */
-    void desenha_arma();
-    void desenha_jogador();
+    void desenha_arma(int flag_ligar_luz);
+    void desenha_jogador(int flag_ligar_luz);
     /** @brief Desenha os tiros ativos do jogador. */
     void desenha_tiros();
     /**
