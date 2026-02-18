@@ -650,6 +650,7 @@ void keyPress(unsigned char key, int x, int y)
     ControladorJogo& controladorJogo = getControladorJogo();
 
     switch(key){
+    /*
     case '1':
         jDraco.para();
         jHarry.para();
@@ -678,6 +679,7 @@ void keyPress(unsigned char key, int x, int y)
         jDraco.atira();
         jHarry.atira();
         break;
+    */
     case 'n':
     case 'N':
         pomoDeOuro.alternarAtivo();    
@@ -814,22 +816,40 @@ void idle_jogo(int timeDiference)
 
     jHarry.atualiza_movimento(timeDiference);
     jDraco.atualiza_movimento(timeDiference);
+    
+    // Gira arma mouse
     jHarry.gira_arma(-mouse_x_diff*timeDiference*JOGADOR_POT_VEL_ANGULAR_MOUSE, mouse_y_diff*timeDiference*JOGADOR_POT_VEL_ANGULAR_MOUSE);
     mouse_x_diff = 0;
     mouse_y_diff = 0;
-
+    // Gira arma teclado
+    jDraco.gira_arma((teclas['4']-teclas['6'])*timeDiference*JOGADOR_POT_VEL_ANGULAR_MOUSE, (teclas['2']-teclas['8'])*timeDiference*JOGADOR_POT_VEL_ANGULAR_MOUSE);
+    
+    
     // Atira
-    static int inversao = 0;
+    static int gatilho_harry = 0;
     if (mouse_esquerda)
     {
-        inversao = 1;
+        gatilho_harry = 1;
     }
-    else if (!mouse_esquerda && inversao)
+    else if (!mouse_esquerda && gatilho_harry)
     {
         //cout << "POW!\n\n";
         jHarry.atira();
-        inversao = 0;
+        gatilho_harry = 0;
     }
+
+    static int gatilho_draco = 0;
+    if (teclas['5'])
+    {
+        gatilho_draco = 1;
+    }
+    else if (!teclas['5'] && gatilho_draco)
+    {
+        //cout << "POW!\n\n";
+        jDraco.atira();
+        gatilho_draco = 0;
+    }
+    
 
     idle_tiros(jHarry.retorna_tiros(), jDraco, timeDiference);
     idle_tiros(jDraco.retorna_tiros(), jHarry, timeDiference);
