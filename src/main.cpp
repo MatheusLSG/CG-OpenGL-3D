@@ -8,6 +8,7 @@
 #include <cstring>
 #include <stdlib.h>
 #include <list>
+#include <algorithm>
 
 #include "../lib/tinyxml2.h"
 using namespace tinyxml2;
@@ -39,10 +40,10 @@ Placar placar;
 // arena (path do SVG passado por linha de comando)
 char* arquivo_arena = nullptr;
 
-// Dados carregados do SVG (se arquivo foi passado). Mantém proporções; altura vem de jogador_altura_global.
+// Dados carregados do SVG (se arquivo foi passado). Mantém proporções.
 DadosArenaSVG dadosArenaSVG;
 
-// Altura do jogador no mundo (ditada por essa variável; usada para obstáculos 4x essa altura).
+// Altura do personagem mais alto. Usada por funções gerais: arena, obstáculos, pomo de ouro (não pelo pulo/colisão pessoal).
 GLfloat jogador_altura_global = JOGADOR_ALTURA;
 
 // teclas
@@ -136,7 +137,6 @@ void mouse_move(int x, int y);
 
 void coleta_dados_arena();
 void desenhaChaoAzul();
-void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r, float g, float b, float alpha);
 
 GLuint geraTexturaDifusaParedes();
 
@@ -260,20 +260,24 @@ void inicializacao ()
     if( !draco.loadTexture(dracoTexturesPaths, dracoTransparente) ) { std::cerr << "Lista de texturas draco invalidas\n"; exit(1); }
 
     vec3 posDraco(0.f, 0.f, 0.f);
+    GLfloat raio_draco = (GLfloat)JOGADOR_RAIO;
     if (dadosArenaSVG.ok) {
         posDraco = vec3(dadosArenaSVG.draco_x, 0.f, dadosArenaSVG.draco_z);
+        raio_draco = (GLfloat)dadosArenaSVG.draco_r;
     }
+    GLfloat alt_draco = 3.f * raio_draco;
 
     POS maoDraco = draco.vecMeshes[0][0].vertsPos[490];
 
+    GLfloat raio_tiro_draco = (GLfloat)RAIO_TIRO * (alt_draco / (GLfloat)JOGADOR_ALTURA);
     jDraco = Jogador3d(
-        JOGADOR_RAIO,
-        JOGADOR_ALTURA,
+        raio_draco,
+        alt_draco,
         0,
         posDraco,
         vec3(maoDraco.x, maoDraco.y, maoDraco.z), 
         VERDE,
-        RAIO_TIRO,
+        raio_tiro_draco,
         GL_LIGHT2,
         draco
     );
@@ -310,26 +314,33 @@ void inicializacao ()
     if( !harry.loadTexture(harryTexturesPaths, harryTransparente)) { std::cerr << "Lista de texturas harry invalidas\n"; exit(1); }
 
     vec3 posHarry(0.f, 0.f, 200.f);
+    GLfloat raio_harry = (GLfloat)JOGADOR_RAIO;
     if (dadosArenaSVG.ok) {
         posHarry = vec3(dadosArenaSVG.harry_x, 0.f, dadosArenaSVG.harry_z);
+        raio_harry = (GLfloat)dadosArenaSVG.harry_r;
     }
+    GLfloat alt_harry = 3.f * raio_harry;
 
     POS maoHarry = harry.vecMeshes[0][0].vertsPos[665];
 
+    GLfloat raio_tiro_harry = (GLfloat)RAIO_TIRO * (alt_harry / (GLfloat)JOGADOR_ALTURA);
     jHarry = Jogador3d(
-        JOGADOR_RAIO,
-        JOGADOR_ALTURA,
+        raio_harry,
+        alt_harry,
         180,
         posHarry,
         vec3(maoHarry.x, maoHarry.y, maoHarry.z),
         VERMELHO,
-        RAIO_TIRO,
+        raio_tiro_harry,
         GL_LIGHT1,
         harry
     );
     
     GLfloat vermelho[] = {1.0f, 0.5f, 0.5f, 1.0f};
     configura_lanterna(GL_LIGHT1, vermelho, vermelho);
+
+    // Altura de referência para funções gerais (arena, obstáculos, pomo de ouro): personagem mais alto
+    jogador_altura_global = std::max(alt_draco, alt_harry);
 
     // ARENA -----------------------------
     if (dadosArenaSVG.ok) {
@@ -433,32 +444,6 @@ void desenhaChaoAzul()
     desenhaDisco(dadosArenaSVG.arena_r, PONTOS_POR_ELIPSE);
 
     glPopMatrix();
-}
-
-void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r, float g, float b, float alpha)
-{
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_ALPHA_TEST);
-
-    glPushMatrix();
-    glTranslatef(pos.x(), pos.y(), pos.z());
-    glRotatef(-90.f, 1.f, 0.f, 0.f);
-
-    glColor4f(r, g, b, alpha);
-    GLfloat mat[4] = { r, g, b, alpha };
-    glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
-    desenhaCilindroLateral(raio, altura, PONTOS_POR_ELIPSE);
-    desenhaDisco(raio, PONTOS_POR_ELIPSE);
-    glTranslatef(0.f, 0.f, altura);
-    glRotatef(180.f, 1.f, 0.f, 0.f);
-    desenhaDisco(raio, PONTOS_POR_ELIPSE);
-
-    glPopMatrix();
-
-    glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.5f);
-    glDisable(GL_BLEND);
 }
 
 void DrawAxes(double size)

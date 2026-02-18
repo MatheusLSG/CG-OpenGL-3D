@@ -4,6 +4,9 @@
 #include <GL/gl.h>
 #include <cmath>
 
+/** Altura do personagem mais alto; usada para teto da arena. Definida em main.cpp. */
+extern GLfloat jogador_altura_global;
+
 /** Distância no plano XZ entre dois pontos. */
 static GLfloat _dist_xz(const vec3& a, const vec3& b) {
     GLfloat dx = a.x() - b.x();
@@ -23,7 +26,7 @@ static GLfloat _get_ground_level(GLfloat x, GLfloat z, GLfloat raio_jogador,
             ground = std::max(ground, o.pos().y() + o.altura());
     }
     if (outro && _dist_xz(p, outro->pos()) <= raio_jogador + outro->raio())
-        ground = std::max(ground, outro->pos().y() + JOGADOR_ALTURA);
+        ground = std::max(ground, outro->pos().y() + outro->altura());
     return ground;
 }
 
@@ -150,41 +153,41 @@ void Jogador3d::atualiza_animacao()
 
 void Jogador3d::desenha_arma(int flag_ligar_luz)
 {
-   
+    GLfloat escala_altura = jogador_altura / (GLfloat)JOGADOR_ALTURA;
+    /* Espessura da varinha em relação ao raio do personagem; fator < 1 deixa mais fina */
+    GLfloat espessura_varinha = (jogador_raio / (GLfloat)JOGADOR_RAIO) * 0.65f;
 
     glPushMatrix();
         glTranslatef(jogador_pos.x(), jogador_pos.y(), jogador_pos.z());
         glRotatef(jogador_theta, 0,1,0);
-    
-        glTranslatef(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z()); 
+        glTranslatef(escala_altura * jogador_arma_pos.x(), escala_altura * jogador_arma_pos.y(), escala_altura * jogador_arma_pos.z());
         glRotatef(jogador_arma_phi,1,0,0);
         glRotatef(jogador_arma_tetha,0,1,0);
-        
+
         GLfloat marrom_difuso[] = { 0.45f, 0.25f, 0.14f, 1.0f };
         GLfloat preto[]         = { 0.0f, 0.0f, 0.0f, 1.0f };
-        
+
         glMaterialfv(GL_FRONT, GL_DIFFUSE, marrom_difuso);
-        glMaterialfv(GL_FRONT, GL_SPECULAR, preto); 
-        glMaterialf(GL_FRONT, GL_SHININESS, 0.0f);  
+        glMaterialfv(GL_FRONT, GL_SPECULAR, preto);
+        glMaterialf(GL_FRONT, GL_SHININESS, 0.0f);
         glColor3f(0.45f, 0.25f, 0.14f);
-        glTranslatef(0,0,jogador_arma_tamanho);
+        glTranslatef(0,0, escala_altura * jogador_arma_tamanho);
         if (flag_ligar_luz)
         {
             glEnable(GL_LIGHTING);
             glEnable(jogador_luz);
             GLfloat zero[] = {0.0f, 0.0f, 0.0f, 1.0f};
             glLightfv(jogador_luz, GL_POSITION, zero);
-            
 
-            GLfloat direcao_foco[] = {jogador_arma_dir.x(), jogador_arma_dir.y(), jogador_arma_dir.z(), 0.0f}; 
+            GLfloat direcao_foco[] = {jogador_arma_dir.x(), jogador_arma_dir.y(), jogador_arma_dir.z(), 0.0f};
             glLightfv(jogador_luz, GL_SPOT_DIRECTION, direcao_foco);
         }
         else
         {
             glDisable(jogador_luz);
         }
-        glTranslatef(0,0,-jogador_arma_tamanho/2);
-        glScalef(1, 1, jogador_arma_tamanho);
+        glTranslatef(0,0, -escala_altura * jogador_arma_tamanho/2);
+        glScalef(espessura_varinha, espessura_varinha, escala_altura * jogador_arma_tamanho);
         glutSolidCube(1);
     glPopMatrix();
 }
@@ -195,9 +198,12 @@ void Jogador3d::desenha_jogador(int flag_ligar_luz)
         glCullFace(GL_BACK);
 
         glTranslatef(jogador_pos.x(), jogador_pos.y(), jogador_pos.z());
-        
         glRotatef(jogador_theta, 0,1,0);
-        
+
+        /* Escala o modelo para a cabeça ficar limitada pela altura do personagem (modelo padrão = JOGADOR_ALTURA) */
+        GLfloat escala_altura = jogador_altura / (GLfloat)JOGADOR_ALTURA;
+        glScalef(escala_altura, escala_altura, escala_altura);
+
         jogador_modelo.drawCurrent();
 
     glPopMatrix();
@@ -275,7 +281,8 @@ void Jogador3d::pula()
 {
     if (!esta_no_ar()) {
         jogador_y_inicio_pulo = jogador_pos.y();
-        jogador_vy = VELOCIDADE_PULO_INICIAL;
+        /* Pulo em relação ao personagem mais alto: mesma altura máxima para todos */
+        jogador_vy = 2.f * jogador_altura_global;
         jogador_estado_atual = PULANDO;
     }
 }
@@ -306,11 +313,11 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
         }
     }
 
-    jogador_vy -= GRAVIDADE * (GLfloat)t_dif;
+    jogador_vy -= jogador_altura_global * (GLfloat)t_dif;  /* gravidade em relação ao personagem mais alto */
     jogador_pos.e[1] += jogador_vy * (GLfloat)t_dif;
 
-    /* Limite do pulo: 2x a altura do personagem em relação ao chão de onde pulou */
-    GLfloat pulo_teto_y = jogador_y_inicio_pulo + PULO_ALTURA_MAXIMA;
+    /* Limite do pulo: 2× a altura do personagem mais alto (igual para todos) */
+    GLfloat pulo_teto_y = jogador_y_inicio_pulo + 2.f * jogador_altura_global;
     if (jogador_pos.y() > pulo_teto_y) {
         jogador_pos.e[1] = pulo_teto_y;
         jogador_vy = 0.f;
@@ -319,8 +326,8 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
         jogador_flag_anim = 1;
     }
 
-    /* Teto da arena: cabeça (y + JOGADOR_ALTURA) não pode passar do teto (4x altura do personagem) */
-    GLfloat teto_max_y = TETO_ARENA_ALTURA - JOGADOR_ALTURA;
+    /* Teto da arena: cabeça (y + jogador_altura) não pode passar do teto */
+    GLfloat teto_max_y = OBSTACULO_ALTURA_MULTIPLICADOR * jogador_altura_global - jogador_altura;
     if (jogador_pos.y() > teto_max_y) {
         jogador_pos.e[1] = teto_max_y;
         jogador_vy = 0.f;
@@ -396,25 +403,20 @@ void Jogador3d::atira()
     if (jogador_estado_atual != CAINDO && jogador_estado_atual != PULANDO) 
         jogador_estado_atual = ATACANDO;
 
-    vec3 tiro_arma_topo = vec3(0,0,jogador_arma_tamanho);
+    GLfloat escala_altura = jogador_altura / (GLfloat)JOGADOR_ALTURA;
+    vec3 arma_pos_esc(escala_altura * jogador_arma_pos.x(), escala_altura * jogador_arma_pos.y(), escala_altura * jogador_arma_pos.z());
+    GLfloat arma_tam_esc = escala_altura * jogador_arma_tamanho;
+
+    vec3 tiro_arma_topo = vec3(0, 0, arma_tam_esc);
     tiro_arma_topo = rotacao3Dy(jogador_arma_tetha, tiro_arma_topo);
     tiro_arma_topo = rotacao3Dx(jogador_arma_phi, tiro_arma_topo);
-    tiro_arma_topo = translacao3D(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z(), tiro_arma_topo);
-    
+    tiro_arma_topo = translacao3D(arma_pos_esc.x(), arma_pos_esc.y(), arma_pos_esc.z(), tiro_arma_topo);
     tiro_arma_topo = rotacao3Dy(jogador_theta, tiro_arma_topo);
     tiro_arma_topo = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_arma_topo);
-    
-    
-    // adiciona
-    tiros.push_back( 
-                    new Tiro3d(
-                    tiro_arma_topo, 
-                    jogador_arma_dir, 
-                    jogador_tiro_raio, 
-                    jogador_tiro_cor, 
-                    this
-                )
-            );
+
+    tiros.push_back(
+        new Tiro3d(tiro_arma_topo, jogador_arma_dir, jogador_tiro_raio, jogador_tiro_cor, this)
+    );
 }
 
 bool Jogador3d::verifica_colisao_inimigo(const Jogador3d& inimigo) const
@@ -481,8 +483,8 @@ void Jogador3d::aplica_colisao_inimigo(Jogador3d& outro)
     if (d >= soma_raios) return;
 
     const GLfloat eps_em_cima = 2.0f;
-    GLfloat meu_topo = jogador_pos.y() + JOGADOR_ALTURA;
-    GLfloat topo_outro = outro.pos().y() + JOGADOR_ALTURA;
+    GLfloat meu_topo = jogador_pos.y() + jogador_altura;
+    GLfloat topo_outro = outro.pos().y() + outro.altura();
     /* Se um está em cima do outro, não empurra em XZ (permite subir em cima) */
     if (jogador_pos.y() >= topo_outro - eps_em_cima) return;  /* este está em cima do outro */
     if (outro.pos().y() >= meu_topo - eps_em_cima) return;   /* o outro está em cima deste */
@@ -519,33 +521,28 @@ void Jogador3d::dano()
 
 void Jogador3d::posiciona_camera_arma()
 {
-    //glTranslatef(jogador_pos.x(), jogador_pos.y(), jogador_pos.z());
-    //glTranslatef(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z());
-     //+7.5f
+    GLfloat escala_altura = jogador_altura / (GLfloat)JOGADOR_ALTURA;
+    vec3 arma_pos_esc = vec3(escala_altura * jogador_arma_pos.x(), escala_altura * jogador_arma_pos.y(), escala_altura * jogador_arma_pos.z());
+    GLfloat arma_tam_esc = escala_altura * jogador_arma_tamanho;
+
     glMatrixMode (GL_PROJECTION);
         glLoadIdentity();
         gluPerspective (45, (GLfloat)VIEWPORT_LARGURA/(GLfloat)VIEWPORT_DOWN_ALTURA, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
 
-    vec3 arma_base = vec3(jogador_arma_pos) + vec3(0, 1.5f, 0);
+    vec3 arma_base = arma_pos_esc + vec3(0, 1.5f * escala_altura, 0);
     arma_base = rotacao3Dy(jogador_theta, arma_base);
     arma_base = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), arma_base);
 
-    vec3 arma_topo = vec3(0,0,jogador_arma_tamanho) + vec3(0, 1.55f, 0);;
+    vec3 arma_topo = vec3(0, 0, arma_tam_esc) + vec3(0, 1.55f * escala_altura, 0);
     arma_topo = rotacao3Dy(jogador_arma_tetha, arma_topo);
     arma_topo = rotacao3Dx(jogador_arma_phi, arma_topo);
-    arma_topo = translacao3D(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z(), arma_topo);
-    
+    arma_topo = translacao3D(arma_pos_esc.x(), arma_pos_esc.y(), arma_pos_esc.z(), arma_topo);
     arma_topo = rotacao3Dy(jogador_theta, arma_topo);
     arma_topo = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), arma_topo);
 
-   
-    
     vec3 dir_arma = (arma_topo - arma_base) / (arma_topo - arma_base).length();
 
-    vec3 arma_meio = arma_base + (jogador_arma_tamanho/2)*dir_arma;
-
-    
     gluLookAt(arma_base.x(), arma_base.y(), arma_base.z(), arma_topo.x(), arma_topo.y(), arma_topo.z(), 0.f, 1.f, 0.f);
 }
 

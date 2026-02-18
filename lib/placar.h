@@ -130,6 +130,7 @@ public:
         glPushMatrix();
         glLoadIdentity();
 
+        glDisable(GL_DEPTH_TEST);
         glDisable(GL_LIGHTING);
 
         {
@@ -190,6 +191,7 @@ public:
         }
 
         glEnable(GL_LIGHTING);
+        glEnable(GL_DEPTH_TEST);
 
         glPopMatrix();
         glMatrixMode(GL_PROJECTION);
