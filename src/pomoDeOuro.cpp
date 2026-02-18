@@ -57,6 +57,7 @@ void PomoDeOuro::aplicarLuz() const {
 
 void PomoDeOuro::desenhar() const {
     glPushMatrix();
+    glCullFace(GL_FRONT);
     glTranslatef(posicao_[0], posicao_[1], posicao_[2]);
     GLfloat emiss[4] = { 0.7f, 0.75f, 1.f, 1.f };
     GLfloat amb[4]   = { 0.2f, 0.2f, 0.3f, 1.f };

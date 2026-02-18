@@ -488,6 +488,7 @@ void desenhaJogador(){
     
 
     glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_CULL_FACE);
     glPushMatrix();
     // Translada para o centro do personagem para facilitar a rotacao da camera
     glTranslatef(0,-40,0);
@@ -520,7 +521,8 @@ void desenhaJogador(){
             o.desenha();
         if (pomoDeOuro.estaAtivo())
             pomoDeOuro.desenhar();
-
+        
+        
         glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, 0.5f);
             jHarry.desenha_jogador();
@@ -542,11 +544,14 @@ void desenhaJogador(){
         pomoDeOuro.aplicarLuz();
 
         desenhaChaoAzul();
+        
         for (Obstaculo3d& o : obstaculos)
             o.desenha();
+        
         if (pomoDeOuro.estaAtivo())
             pomoDeOuro.desenhar();
 
+       
         glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, 0.5f);
             jHarry.desenha_jogador();

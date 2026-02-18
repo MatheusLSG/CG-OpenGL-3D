@@ -150,9 +150,8 @@ void Jogador3d::atualiza_animacao()
 
 void Jogador3d::desenha_jogador()
 {
-    
-
     glPushMatrix();
+        glCullFace(GL_BACK);
 
         glTranslatef(jogador_pos.x(), jogador_arma_pos.y(), jogador_pos.z());
         
@@ -262,7 +261,7 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
             return;
         }
     }
-    
+
     jogador_vy -= GRAVIDADE * (GLfloat)t_dif;
     jogador_pos.e[1] += jogador_vy * (GLfloat)t_dif;
     jogador_arma_pos.e[1] = jogador_pos.y();

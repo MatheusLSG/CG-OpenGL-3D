@@ -48,7 +48,10 @@ static void desenhaCilindroLateral(GLfloat raio, GLfloat altura, int numFatias, 
 void Obstaculo3d::desenha()
 {
     glPushMatrix();
-
+    
+    if (tipo_obstaculo == OBSTACULO_ATRATOR) glCullFace(GL_BACK);
+    else if (tipo_obstaculo == OBSTACULO_REPULSOR) glCullFace(GL_FRONT);
+    
     // obstaculo_pos = centro da base do cilindro; eixo ao longo Y (altura)
     glTranslatef(obstaculo_pos.x(), obstaculo_pos.y(), obstaculo_pos.z());
     // Cilindro desenhado ao longo de Z; rotacionamos para ter eixo Y
