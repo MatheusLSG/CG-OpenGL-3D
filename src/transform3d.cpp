@@ -5,7 +5,7 @@
 
 vec3 translacao3D(GLfloat dx, GLfloat dy, GLfloat dz,  vec3 ponto)
 {
-    return ponto + vec3(dx, dy, dz);
+    return (ponto + vec3(dx, dy, dz));
 }
 
 vec3 rotacao3Dx(GLfloat ang, vec3 ponto)

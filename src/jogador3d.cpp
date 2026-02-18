@@ -148,6 +148,28 @@ void Jogador3d::atualiza_animacao()
     }
 }
 
+void Jogador3d::desenha_arma(){
+    glPushMatrix();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDisable(GL_ALPHA_TEST);
+
+        glPushMatrix();
+        
+        GLfloat marrom[] = { 0.537, 0,317, 0,160, 1.0 };
+
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, marrom);
+        glutSolidCube(10);
+
+        glPopMatrix();
+
+        glEnable(GL_ALPHA_TEST);
+        glAlphaFunc(GL_GREATER, 0.5f);
+        glDisable(GL_BLEND);
+
+    glPopMatrix();
+}
+
 void Jogador3d::desenha_jogador()
 {
     glPushMatrix();
@@ -155,16 +177,37 @@ void Jogador3d::desenha_jogador()
 
         glTranslatef(jogador_pos.x(), jogador_arma_pos.y(), jogador_pos.z());
         
-        glRotatef(Jogador_theta, 0,1,0);
+        glRotatef(jogador_theta, 0,1,0);
         
         jogador_modelo.drawCurrent();
-    
+
+        glTranslatef(COORD_MAO_JOGADOR.x(), COORD_MAO_JOGADOR.y(), COORD_MAO_JOGADOR.z()); //Cordenadas do modelo
+        glRotatef(jogador_arma_phi,1,0,0);
+        glRotatef(jogador_arma_tetha,0,1,0);
+        
+        
+        GLfloat marrom_difuso[] = { 0.45f, 0.25f, 0.14f, 1.0f };
+        GLfloat preto[]         = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+        // Aplica ao material
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, marrom_difuso);
+        glMaterialfv(GL_FRONT, GL_SPECULAR, preto); // Remove brilho
+        glMaterialf(GL_FRONT, GL_SHININESS, 0.0f);   // Brilho zero
+        glColor3f(0.45f, 0.25f, 0.14f);
+        glTranslatef(0,0,7.5);
+        glScalef(1, 1, 15);
+        glutSolidCube(1);
+
     glPopMatrix();
 }
 
+
+
 void Jogador3d::desenha_tiros()
 {
-
+    for (auto tiro = tiros.begin(); tiro != tiros.end(); ++tiro) {
+        (*tiro)->desenha();
+    }
 }
 
 void Jogador3d::move(GLfloat s_dif)
@@ -224,7 +267,8 @@ void Jogador3d::para()
     if (esta_no_ar())
         jogador_movimento_ar = 0;
     else
-        jogador_estado_atual = PARADO;
+        if(jogador_estado_atual != ATACANDO) 
+            jogador_estado_atual = PARADO;
 }
 
 void Jogador3d::pula()
@@ -292,7 +336,8 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
         jogador_pos.e[1] = ground;
         jogador_arma_pos.e[1] = ground;
         jogador_vy = 0.f;
-        jogador_estado_atual = PARADO;
+        if(jogador_estado_atual != ATACANDO)
+            jogador_estado_atual = PARADO;
     } else if (jogador_vy < 0.f && jogador_estado_atual == PULANDO) {
         jogador_estado_atual = CAINDO;
         jogador_modelo.drawInit(CAINDO);
@@ -302,8 +347,8 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
 
 void Jogador3d::gira_corpo(GLfloat theta_dif)
 {
-    Jogador_theta += theta_dif;
-    jogador_dir = rotacao3Dy(Jogador_theta, vec3(0, 0, 1));
+    jogador_theta += theta_dif;
+    jogador_dir = rotacao3Dy(jogador_theta, vec3(0, 0, 1));
 }
 
 void Jogador3d::set_pos_xz(GLfloat x, GLfloat z)
@@ -319,19 +364,52 @@ void Jogador3d::set_posicao_e_rotacao(vec3 pos, GLfloat theta_graus)
     jogador_pos.e[0] = pos.x();
     jogador_pos.e[1] = 0.f;
     jogador_pos.e[2] = pos.z();
-    Jogador_theta = theta_graus;
-    jogador_dir = rotacao3Dy(Jogador_theta, vec3(0, 0, 1));
+    jogador_theta = theta_graus;
+    jogador_dir = rotacao3Dy(jogador_theta, vec3(0, 0, 1));
     jogador_arma_pos = jogador_pos;
 }
 
 void Jogador3d::gira_arma(GLfloat theta_dif, GLfloat phi_dif)
 {
+    jogador_arma_tetha += theta_dif;
+    if (jogador_arma_tetha > 45) jogador_arma_tetha = 45;
+    if (jogador_arma_tetha < -45) jogador_arma_tetha = -45;
 
+    jogador_arma_phi += phi_dif;
+    if (jogador_arma_phi > 45) jogador_arma_phi = 45;
+    if (jogador_arma_phi < -45) jogador_arma_phi = -45;
 }
 
 void Jogador3d::atira()
 {
     jogador_estado_atual = ATACANDO;
+
+    // Base
+    vec3 tiro_braco_base = vec3(COORD_MAO_JOGADOR);
+    tiro_braco_base = rotacao3Dy(jogador_theta, tiro_braco_base);
+    tiro_braco_base = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_braco_base);
+    
+    vec3 tiro_braco_topo = vec3(0,0,15);
+    tiro_braco_topo = rotacao3Dy(jogador_arma_tetha, tiro_braco_topo);
+    tiro_braco_topo = rotacao3Dx(jogador_arma_phi, tiro_braco_topo);
+    tiro_braco_topo = translacao3D(COORD_MAO_JOGADOR.x(), COORD_MAO_JOGADOR.y(), COORD_MAO_JOGADOR.z(), tiro_braco_topo);
+    
+    tiro_braco_topo = rotacao3Dy(jogador_theta, tiro_braco_topo);
+    tiro_braco_topo = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_braco_topo);
+    
+    // diff para dir
+    vec3 tiro_dir = tiro_braco_topo - tiro_braco_base;
+    tiro_dir = tiro_dir / tiro_dir.length();
+    // adiciona
+    tiros.push_back( 
+                    new Tiro3d(
+                    tiro_braco_topo, 
+                    tiro_dir, 
+                    jogador_tiro_raio, 
+                    jogador_tiro_cor, 
+                    this
+                )
+            );
 }
 
 bool Jogador3d::verifica_colisao_inimigo(const Jogador3d& inimigo) const

@@ -28,15 +28,15 @@ public:
     /**
      * @brief Constrói um tiro na posição inicial com ângulo e raio dados.
      * @param pos_ini Posição inicial no mundo.
-     * @param ang Ângulo de disparo (graus).
+     * @param dir Direção de disparo.
      * @param raio Raio do tiro (colisão).
      * @param cor Cor do tiro.
      * @param jogador Ponteiro para o jogador que disparou.
      */
-    Tiro3d(vec3 pos_ini, GLfloat ang, GLfloat raio, cor cor, Jogador3d* jogador) :
+    Tiro3d(vec3 pos_ini, vec3 dir, GLfloat raio, cor cor, Jogador3d* jogador) :
         tiro_pos_ini        {pos_ini}, 
         tiro_pos_atual      {pos_ini},
-        tiro_dir            {},
+        tiro_dir            {dir},
         tiro_raio           {raio},
         tiro_tempo_atual    {0},
         tiro_tempo_limite   {TIRO_TEMPO_LIMITE},

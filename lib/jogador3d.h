@@ -11,7 +11,7 @@
 #include "../lib/obstaculo3d.h"
 #include "../lib/objloader.h"
 
-class Tiro;
+class Tiro3d;
 
 /**
  * @brief Jogador 3D: posição, direção, modelo animado, tiros e colisões.
@@ -20,10 +20,11 @@ class Jogador3d
 {
     GLint   jogador_vida;
     GLfloat jogador_raio;
+    GLfloat jogador_altura;
 
     vec3    jogador_pos;
     vec3    jogador_dir;
-    GLfloat Jogador_theta;
+    GLfloat jogador_theta;
 
     meshes  jogador_modelo;
     Estado  jogador_estado_atual;
@@ -35,7 +36,7 @@ class Jogador3d
     GLfloat jogador_arma_phi;
 
     cor     jogador_tiro_cor;
-
+    GLfloat jogador_tiro_raio;
     int     jogador_flag_anim;
     int     jogador_inv;
 
@@ -43,20 +44,23 @@ class Jogador3d
     GLfloat jogador_y_inicio_pulo; /**< Y do chão quando iniciou o pulo (limite de altura é relativo a isso). */
     int     jogador_movimento_ar;  /**< No ar: 1/2=frente, -1/-2=trás, 0=não mover (permite arco no pulo). */
 
-    std::list<Tiro*> tiros;
+    std::list<Tiro3d*> tiros;
 
 public:
     Jogador3d() {}
     Jogador3d(GLfloat ini_jogador_raio,
+              GLfloat ini_jogador_altura,
               GLfloat ini_jogador_theta,
               vec3 ini_jogador_pos,
               cor ini_jogador_tiro_cor,
+              GLfloat ini_jogador_tiro_raio,
               meshes animacoes) :
         jogador_vida        {VIDAS_INICIAL},
         jogador_raio        {ini_jogador_raio},
+        jogador_altura      {ini_jogador_altura},
         jogador_pos         {ini_jogador_pos},
         jogador_dir         {rotacao3Dy(ini_jogador_theta, vec3(0,0,1))},
-        Jogador_theta       {ini_jogador_theta},
+        jogador_theta       {ini_jogador_theta},
         jogador_modelo      {animacoes},
         jogador_estado_atual{PARADO},
         jogador_anim_atual  {PARADO},
@@ -65,12 +69,13 @@ public:
         jogador_arma_tetha  {},
         jogador_arma_phi    {},
         jogador_tiro_cor    {ini_jogador_tiro_cor},
+        jogador_tiro_raio   {ini_jogador_tiro_raio},
         jogador_flag_anim   {1},
         jogador_inv         {0},
         jogador_vy          {0},
         jogador_y_inicio_pulo{0},
         jogador_movimento_ar{0},
-        tiros               {std::list<Tiro*>()}
+        tiros               {std::list<Tiro3d*>()}
     {}
 
     GLfloat pos_x() const   { return jogador_pos.x(); }
@@ -83,7 +88,7 @@ public:
      */
     vec3 pos() const { return jogador_pos; }
     GLfloat raio() const { return jogador_raio; }
-    GLfloat altura() const { return JOGADOR_ALTURA; }
+    GLfloat altura() const { return jogador_altura; }
     GLint vidas() const { return jogador_vida; }
 
     /** @brief Ajusta a posição no plano XZ (usado pela resolução de colisões). */
@@ -95,13 +100,14 @@ public:
      */
     void set_posicao_e_rotacao(vec3 pos, GLfloat theta_graus);
 
-    std::list<Tiro*>& retorna_tiros() { return tiros; }
+    std::list<Tiro3d*>& retorna_tiros() { return tiros; }
 
     /**
      * @brief Avança o frame da animação conforme o estado atual (PARADO, ANDANDO, etc.).
      */
     void atualiza_animacao();
     /** @brief Desenha o modelo do jogador na posição e rotação atuais. */
+    void desenha_arma();
     void desenha_jogador();
     /** @brief Desenha os tiros ativos do jogador. */
     void desenha_tiros();

@@ -38,9 +38,10 @@ extern bool forcar_zero_emissao;
 #define JOGADOR_PROP_PARADA 1.01
 
 #define JOGADOR_BRACO_VEL_ANGULAR (GLfloat) 225
-#define JOGADOR_POT_VEL_ANGULAR_MOUSE 5
+#define JOGADOR_POT_VEL_ANGULAR_MOUSE 0.2
 
 #define JOGADOR_ALTURA (GLfloat) 80.0
+#define JOGADOR_RAIO (GLfloat) 20.0
 
 /** Gravidade (unidades/s²). */
 #define GRAVIDADE (GLfloat) JOGADOR_ALTURA
@@ -71,6 +72,8 @@ extern bool forcar_zero_emissao;
 
 #define PONTOS_POR_ELIPSE 100
 
+#define COORD_MAO_JOGADOR   vec3(2.5, 64, 28)
+#define RAIO_TIRO           5
 /** Estados de animação do jogador (parado, andando, correndo, pulando, atacando, etc.). */
 enum Estado{
     PARADO,
