@@ -267,7 +267,7 @@ void Jogador3d::para()
     if (esta_no_ar())
         jogador_movimento_ar = 0;
     else
-        if(jogador_estado_atual != ATACANDO) 
+        if(jogador_estado_atual != ATACANDO && jogador_estado_atual != DANO && jogador_estado_atual != PERDER && jogador_estado_atual != GANHAR) 
             jogador_estado_atual = PARADO;
 }
 
@@ -382,7 +382,8 @@ void Jogador3d::gira_arma(GLfloat theta_dif, GLfloat phi_dif)
 
 void Jogador3d::atira()
 {
-    jogador_estado_atual = ATACANDO;
+    if (jogador_estado_atual != CAINDO && jogador_estado_atual != PULANDO) 
+        jogador_estado_atual = ATACANDO;
 
     // Base
     vec3 tiro_braco_base = vec3(COORD_MAO_JOGADOR);
