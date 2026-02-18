@@ -82,7 +82,7 @@ GLuint tex_parede_id = 0;
 
 bool flag_col_tiros = PERMITE_COLISAO_ENTRE_TIROS;
 int flag_ganhador = 0;
-
+int flag_perspectiva = 1;
 
 // OLD:
 
@@ -139,8 +139,7 @@ void desenhaCilindroJogadorDebug(vec3 pos, GLfloat raio, GLfloat altura, float r
 
 GLuint geraTexturaDifusaParedes();
 
-void idle_jogador_1(GLdouble t_dif);
-void idle_jogador_2(GLdouble t_dif);
+void idle_jogo(int timeDiference);
 void idle_tiros(std::list<Tiro3d*>& tiros_aliado, Jogador3d& inimigo, GLdouble t_dif);
 
 void renderiza_texto_direita(vec3 pos, cor cor_texto, char *texto);
@@ -148,12 +147,8 @@ void renderiza_texto_esquerda(vec3 pos, cor cor_texto, char *texto);
 void renderiza_texto_centro(vec3 pos, cor cor_texto, char *texto);
 
 
-void cameraHarryTerceiraPessoa();
-void cameraDracoTerceiraPessoa();
-void cameraHarryArma();
-void cameraDracoArma();
-void cameraHaryOlho();
-void cameraDracoOlho();
+void cameraTerceiraPessoaDraco();
+void cameraTerceiraPessoaHarry();
 
 //OLD
 void mouse(int button, int state, int x, int y);
@@ -266,11 +261,15 @@ void inicializacao ()
     if (dadosArenaSVG.ok) {
         posDraco = vec3(dadosArenaSVG.draco_x, 0.f, dadosArenaSVG.draco_z);
     }
+
+    POS maoDraco = draco.vecMeshes[0][0].vertsPos[490];
+
     jDraco = Jogador3d(
         JOGADOR_RAIO,
         JOGADOR_ALTURA,
         0,
         posDraco,
+        vec3(maoDraco.x, maoDraco.y, maoDraco.z), 
         VERDE,
         RAIO_TIRO,
         draco
@@ -307,11 +306,15 @@ void inicializacao ()
     if (dadosArenaSVG.ok) {
         posHarry = vec3(dadosArenaSVG.harry_x, 0.f, dadosArenaSVG.harry_z);
     }
+
+    POS maoHarry = harry.vecMeshes[0][0].vertsPos[665];
+
     jHarry = Jogador3d(
         JOGADOR_RAIO,
         JOGADOR_ALTURA,
         180,
         posHarry,
+        vec3(maoHarry.x, maoHarry.y, maoHarry.z),
         VERMELHO,
         RAIO_TIRO,
         harry
@@ -484,7 +487,7 @@ void DrawAxes(double size)
     glPopMatrix();
 }
 
-void desenhaMundo(){
+void desenhaMundo(int flag_harry, int flag_draco){
     pomoDeOuro.aplicarLuz();
 
     desenhaChaoAzul();
@@ -496,15 +499,15 @@ void desenhaMundo(){
     
     glEnable(GL_ALPHA_TEST);
         glAlphaFunc(GL_GREATER, 0.5f);
-        jHarry.desenha_jogador();
-        jDraco.desenha_jogador();
+        if(flag_harry) jHarry.desenha_jogador();
+        if(flag_draco) jDraco.desenha_jogador();
         jHarry.desenha_tiros();
         jDraco.desenha_tiros();
 
     if (coordsysToggle == 1)  DrawAxes(83);
 }
 
-void desenhaJogador(){
+void desenhaJogo(){
     
 
     glMatrixMode(GL_MODELVIEW);
@@ -523,21 +526,57 @@ void desenhaJogador(){
         glLoadIdentity();
 
         // Viewport Harry: câmera acompanha Harry (olhar fixo no personagem, sem girar com ele)
-        glViewport(0, 0, janela_largura/2, janela_altura);
+        glViewport(0, 0, VIEWPORT_LARGURA, VIEWPORT_DOWN_ALTURA);
         glPushMatrix();
-            cameraHarryTerceiraPessoa();
-            
-            desenhaMundo();
+            if (flag_perspectiva)
+            {
+                cameraTerceiraPessoaHarry();
+                desenhaMundo(1,1);        
+            }
+            else
+            {
+                jHarry.posiciona_camera_arma();
+                desenhaMundo(0,1);
+                jHarry.desenha_arma();
+            }
+
 
         glPopMatrix();
 
         // Viewport Draco: câmera acompanha Draco (olhar fixo no personagem, sem girar com ele)
-        glViewport(janela_largura/2, 0, janela_largura/2, janela_altura);
+        glViewport(VIEWPORT_LARGURA, 0, VIEWPORT_LARGURA, VIEWPORT_DOWN_ALTURA);
         glPushMatrix();
-            cameraDracoTerceiraPessoa();
-                
+            if (flag_perspectiva)
+            {
+                cameraTerceiraPessoaDraco();   
+                desenhaMundo(1,1);     
+            }
+            else
+            {
+                jDraco.posiciona_camera_arma();
+                desenhaMundo(1,0);
+                jDraco.desenha_arma();
+            }
 
-            desenhaMundo();
+
+        glPopMatrix();
+
+        // Viewport Olho Harry: câmera acompanha Harry (olhar fixo no personagem, sem girar com ele)
+        glViewport(0, VIEWPORT_DOWN_ALTURA, VIEWPORT_LARGURA, VIEWPORT_UP_ALTURA);
+        glPushMatrix();
+            jHarry.posiciona_camera_olho();
+
+            desenhaMundo(1,1);
+
+
+        glPopMatrix();
+
+        // Viewport Olho Draco: câmera acompanha Draco (olhar fixo no personagem, sem girar com ele)
+        glViewport(VIEWPORT_LARGURA, VIEWPORT_DOWN_ALTURA, VIEWPORT_LARGURA, VIEWPORT_UP_ALTURA);
+        glPushMatrix();
+            jDraco.posiciona_camera_olho();
+
+            desenhaMundo(1,1);
 
         glPopMatrix();
 
@@ -568,7 +607,7 @@ void display(void)
     glClearColor (0.30, 0.30, 1.0, 0.0);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    desenhaJogador();
+    desenhaJogo();
 
     getControladorJogo().desenharHUD();
 
@@ -675,8 +714,17 @@ void keyPress(unsigned char key, int x, int y)
         controladorJogo.resetarJogo();
         pulo_tecla_liberada_harry = true;
         pulo_tecla_liberada_draco = true;
+        flag_perspectiva = 1;
         break;
     }
+    case 'v':
+    case 'V':
+        flag_perspectiva = 1;
+        break;
+    case 'b':
+    case 'B':
+        flag_perspectiva = 0;
+        break;
     case 27 :
          exit(0);
     }
@@ -729,7 +777,26 @@ void idle()
         previousTime = currentTimeElapsed;
     GLdouble timeDiference = currentTimeElapsed - previousTime;
     previousTime = currentTimeElapsed;
+    
+    if (getControladorJogo().getEstado() != GAME_OVER)
+        idle_jogo(timeDiference);
 
+    currentTime = (int)currentTimeElapsed;
+    int fatorTempo = 17;
+    if (currentTime - lastTime > fatorTempo) {
+        lastTime = currentTime;
+        updateDrawing = 1;
+        /* Zoom contínuo ao segurar + ou - (key repeat desligado para o pulo; aplicamos aqui) */
+        if (teclas['+']){ zoom++; teclas['+'] = 0;}
+        if (teclas['-']){ zoom--; teclas['-'] = 0;}
+    }
+
+    glutPostRedisplay();
+}
+
+void idle_jogo(int timeDiference)
+{
+    
     /* Movimento: estado a partir das teclas (minúscula e maiúscula) */
     if (teclas['w'] || teclas['W'])
         jHarry.move(1);
@@ -791,32 +858,6 @@ void idle()
         jDraco.gira_corpo((GLfloat)(JOGADOR_VEL_ANGULAR * segundos));
     if ((teclas[0xE7] || teclas[0xC7]) && !jDraco.esta_no_ar())  /* Ç minúsculo (0xE7) e maiúsculo (0xC7) */
         jDraco.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
-
-    /* --- TIROS: quando você implementar a atualização dos tiros e a colisão com o inimigo,
-         copie e cole o código abaixo dentro do if que confirma que um tiro acertou. --- */
-    /*
-    int vidasAntes = inimigo.vidas();
-    inimigo.dano();
-    if (&inimigo == &jHarry)
-        placar.notificarDanoEsquerda(vidasAntes);
-    else
-        placar.notificarDanoDireita(vidasAntes);
-    delete *it;
-    tiros_aliado.erase(it);
-    break;
-    */
-
-    currentTime = (int)currentTimeElapsed;
-    int fatorTempo = 33;
-    if (currentTime - lastTime > fatorTempo) {
-        lastTime = currentTime;
-        updateDrawing = 1;
-        /* Zoom contínuo ao segurar + ou - (key repeat desligado para o pulo; aplicamos aqui) */
-        if (teclas['+']) zoom++;
-        if (teclas['-']) zoom--;
-    }
-
-    glutPostRedisplay();
 }
 /*
 int main(int argc, char** argv)
@@ -836,21 +877,13 @@ int main(int argc, char** argv)
 }
 */
 
-void cameraHarryTerceiraPessoa()
-{
-    /* Offset da câmera (zoom e ângulos); rotação da câmera é independente dos personagens (mouse). */
-    GLfloat ex = (GLfloat)(zoom*sin(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
-    GLfloat ey = (GLfloat)(zoom*sin(camXYAngle*M_PI/180));
-    GLfloat ez = (GLfloat)(zoom*cos(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
 
-    vec3 h = jHarry.pos();
-    gluLookAt(h.x()+ex, h.y()+ey, h.z()+ez, h.x(), h.y(), h.z(), 0.f, 1.f, 0.f);
-    
-    glTranslatef(0.f, -40.f, 0.f);
-}
-
-void cameraDracoTerceiraPessoa()
+void cameraTerceiraPessoaDraco()
 {
+     glMatrixMode (GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective (45, (GLfloat)VIEWPORT_LARGURA/(GLfloat)VIEWPORT_DOWN_ALTURA, 1, 1000);
+    glMatrixMode(GL_MODELVIEW);
     /* Offset da câmera (zoom e ângulos); rotação da câmera é independente dos personagens (mouse). */
     GLfloat ex = (GLfloat)(zoom*sin(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
     GLfloat ey = (GLfloat)(zoom*sin(camXYAngle*M_PI/180));
@@ -859,28 +892,24 @@ void cameraDracoTerceiraPessoa()
     vec3 d = jDraco.pos();
     gluLookAt(d.x()-ex, d.y()+ey, d.z()-ez, d.x(), d.y(), d.z(), 0.f, 1.f, 0.f);
     
-    glTranslatef(0.f, -40.f, 0.f);
+    glTranslatef(0.f, -jDraco.altura()/2, 0.f);
 }
 
-void cameraHarryArma()
+void cameraTerceiraPessoaHarry()
 {
+     glMatrixMode (GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective (45, (GLfloat)VIEWPORT_LARGURA/(GLfloat)VIEWPORT_DOWN_ALTURA, 1, 1000);
+    glMatrixMode(GL_MODELVIEW);
+    /* Offset da câmera (zoom e ângulos); rotação da câmera é independente dos personagens (mouse). */
+    GLfloat ex = -(GLfloat)(zoom*sin(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
+    GLfloat ey = (GLfloat)(zoom*sin(camXYAngle*M_PI/180));
+    GLfloat ez = -(GLfloat)(zoom*cos(camXZAngle*M_PI/180)*cos(camXYAngle*M_PI/180));
+
+    vec3 d = jHarry.pos();
+    gluLookAt(d.x()-ex, d.y()+ey, d.z()-ez, d.x(), d.y(), d.z(), 0.f, 1.f, 0.f);
     
-    
-}
-
-void cameraDracoArma()
-{
-
-}
-
-void cameraHaryOlho()
-{
-
-}
-
-void cameraDracoOlho()
-{
-
+    glTranslatef(0.f, -jHarry.altura()/2, 0.f);
 }
 
 
@@ -894,14 +923,25 @@ void idle_tiros(std::list<Tiro3d*>& tiros_aliado, Jogador3d& inimigo, GLdouble t
             (*tiro_aliado)->move(TIRO_VELOCIDADE*(t_dif/1000));
             
             bool colidiu = false;
-
-            colidiu = colidiu || (*(*tiro_aliado)).verifica_colisao_jogador(inimigo);
+            bool colidiuDano = false;
+            colidiu = colidiuDano = colidiu || (*(*tiro_aliado)).verifica_colisao_jogador(inimigo);
             colidiu = colidiu || (*(*tiro_aliado)).verifica_colisao_obstaculos(obstaculos);
             
            //cout << colidiu << "\n";
 
             if (colidiu)
             {
+                if (colidiuDano)
+                {
+                    int vidasAntes = inimigo.vidas();
+
+                    if (&inimigo == &jHarry)
+                        placar.notificarDanoEsquerda(vidasAntes);
+                    else
+                        placar.notificarDanoDireita(vidasAntes);
+            
+                }
+                
                 auto aux = (*tiro_aliado);
                 tiro_aliado = tiros_aliado.erase(tiro_aliado);  
                 delete aux;

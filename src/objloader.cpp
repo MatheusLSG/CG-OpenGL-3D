@@ -39,7 +39,7 @@ int meshes::loadMeshAnim(string path, int qtd, int none){
     char str[5];
     size_t index = path.find("#");
     for(int i = 0; i<qtd; i++){
-        snprintf (str, 7, "%04d", i);
+        snprintf (str, 11, "%04d", i);
         path.replace(index, 4, str);
         // std::cout << path << std::endl;  // debug: prints de objetos comentados
         this->vecMeshes[movID].push_back(m);

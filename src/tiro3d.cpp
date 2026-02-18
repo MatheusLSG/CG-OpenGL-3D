@@ -65,7 +65,10 @@ bool Tiro3d::verifica_colisao_jogador(Jogador3d& jogador)
         
         if (t_y - t_raio < j_y+j_altura && t_y + t_raio > j_y)
         {
-              jogador.dano();
+            
+            
+            jogador.dano();
+            
             colidiu = true;
         }
     }

@@ -34,7 +34,8 @@ class Jogador3d
     vec3    jogador_arma_dir;
     GLfloat jogador_arma_tetha;
     GLfloat jogador_arma_phi;
-
+    GLfloat jogador_arma_tamanho;
+    
     cor     jogador_tiro_cor;
     GLfloat jogador_tiro_raio;
     int     jogador_flag_anim;
@@ -52,6 +53,7 @@ public:
               GLfloat ini_jogador_altura,
               GLfloat ini_jogador_theta,
               vec3 ini_jogador_pos,
+              vec3 ini_jogador_arma_pos,
               cor ini_jogador_tiro_cor,
               GLfloat ini_jogador_tiro_raio,
               meshes animacoes) :
@@ -64,10 +66,12 @@ public:
         jogador_modelo      {animacoes},
         jogador_estado_atual{PARADO},
         jogador_anim_atual  {PARADO},
-        jogador_arma_pos    {ini_jogador_pos},
-        jogador_arma_dir    {},
-        jogador_arma_tetha  {},
-        jogador_arma_phi    {},
+        //jogador_arma_pos    {vec3(ini_jogador_raio*0.20, ini_jogador_altura*0.8, ini_jogador_raio*1.45)},
+        jogador_arma_pos    {ini_jogador_arma_pos},
+        jogador_arma_dir    {rotacao3Dy(ini_jogador_theta, vec3(0,0,1))},
+        jogador_arma_tetha  {0},
+        jogador_arma_phi    {0},
+        jogador_arma_tamanho{JOGADOR_ARMA_TAMANHO},
         jogador_tiro_cor    {ini_jogador_tiro_cor},
         jogador_tiro_raio   {ini_jogador_tiro_raio},
         jogador_flag_anim   {1},
@@ -155,6 +159,10 @@ public:
      * @brief Reduz uma vida do jogador. O placar deve ser notificado em seguida.
      */
     void dano();
+
+    void posiciona_camera_arma();
+    void posiciona_camera_olho();
+
     void resetar_vidas()
     {
         jogador_vida = VIDAS_INICIAL;

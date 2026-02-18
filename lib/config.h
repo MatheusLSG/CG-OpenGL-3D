@@ -24,10 +24,11 @@ extern bool forcar_zero_emissao;
 
 /* Janela e viewport */
 #define  JANELA_LARGURA    (GLint) 800
-#define  JANELA_ALTURA     (GLint) 500
+#define  JANELA_ALTURA     (GLint) 700
 
-#define  VIEWPORT_LARGURA  (GLint) 500
-#define  VIEWPORT_ALTURA   (GLint) 500
+#define  VIEWPORT_LARGURA  (GLint) 400
+#define  VIEWPORT_UP_ALTURA   (GLint) 200
+#define  VIEWPORT_DOWN_ALTURA   (GLint) 500
 
 /** Velocidade do jogador ao andar (unidades por segundo). Multiplicada pelo delta de tempo para ser independente da taxa de quadros. */
 #define JOGADOR_VELOCIDADE (GLfloat) 125.0
@@ -73,7 +74,9 @@ extern bool forcar_zero_emissao;
 #define PONTOS_POR_ELIPSE 100
 
 #define COORD_MAO_JOGADOR   vec3(2.5, 64, 28)
-#define RAIO_TIRO           5
+#define RAIO_TIRO               5
+#define JOGADOR_ARMA_TAMANHO    15
+
 /** Estados de animação do jogador (parado, andando, correndo, pulando, atacando, etc.). */
 enum Estado{
     PARADO,

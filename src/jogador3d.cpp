@@ -148,25 +148,26 @@ void Jogador3d::atualiza_animacao()
     }
 }
 
-void Jogador3d::desenha_arma(){
+void Jogador3d::desenha_arma()
+{
     glPushMatrix();
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDisable(GL_ALPHA_TEST);
-
-        glPushMatrix();
+        glTranslatef(jogador_pos.x(), jogador_pos.y(), jogador_pos.z());
+        glRotatef(jogador_theta, 0,1,0);
+    
+        glTranslatef(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z()); 
+        glRotatef(jogador_arma_phi,1,0,0);
+        glRotatef(jogador_arma_tetha,0,1,0);
         
-        GLfloat marrom[] = { 0.537, 0,317, 0,160, 1.0 };
-
-        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, marrom);
-        glutSolidCube(10);
-
-        glPopMatrix();
-
-        glEnable(GL_ALPHA_TEST);
-        glAlphaFunc(GL_GREATER, 0.5f);
-        glDisable(GL_BLEND);
-
+        GLfloat marrom_difuso[] = { 0.45f, 0.25f, 0.14f, 1.0f };
+        GLfloat preto[]         = { 0.0f, 0.0f, 0.0f, 1.0f };
+        
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, marrom_difuso);
+        glMaterialfv(GL_FRONT, GL_SPECULAR, preto); 
+        glMaterialf(GL_FRONT, GL_SHININESS, 0.0f);  
+        glColor3f(0.45f, 0.25f, 0.14f);
+        glTranslatef(0,0,7.5);
+        glScalef(1, 1, jogador_arma_tamanho);
+        glutSolidCube(1);
     glPopMatrix();
 }
 
@@ -175,30 +176,15 @@ void Jogador3d::desenha_jogador()
     glPushMatrix();
         glCullFace(GL_BACK);
 
-        glTranslatef(jogador_pos.x(), jogador_arma_pos.y(), jogador_pos.z());
+        glTranslatef(jogador_pos.x(), jogador_pos.y(), jogador_pos.z());
         
         glRotatef(jogador_theta, 0,1,0);
         
         jogador_modelo.drawCurrent();
 
-        glTranslatef(COORD_MAO_JOGADOR.x(), COORD_MAO_JOGADOR.y(), COORD_MAO_JOGADOR.z()); //Cordenadas do modelo
-        glRotatef(jogador_arma_phi,1,0,0);
-        glRotatef(jogador_arma_tetha,0,1,0);
-        
-        
-        GLfloat marrom_difuso[] = { 0.45f, 0.25f, 0.14f, 1.0f };
-        GLfloat preto[]         = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-        // Aplica ao material
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, marrom_difuso);
-        glMaterialfv(GL_FRONT, GL_SPECULAR, preto); // Remove brilho
-        glMaterialf(GL_FRONT, GL_SHININESS, 0.0f);   // Brilho zero
-        glColor3f(0.45f, 0.25f, 0.14f);
-        glTranslatef(0,0,7.5);
-        glScalef(1, 1, 15);
-        glutSolidCube(1);
-
     glPopMatrix();
+
+    desenha_arma();
 }
 
 
@@ -239,8 +225,6 @@ void Jogador3d::atualiza_movimento(GLdouble time_dif)
         else
             desl = -passo * jogador_dir;
         jogador_pos += desl;
-        jogador_arma_pos.e[0] = jogador_pos.x();
-        jogador_arma_pos.e[2] = jogador_pos.z();
         return;
     }
 
@@ -258,8 +242,6 @@ void Jogador3d::atualiza_movimento(GLdouble time_dif)
     }
 
     jogador_pos += desl;
-    jogador_arma_pos.e[0] = jogador_pos.x();
-    jogador_arma_pos.e[2] = jogador_pos.z();
 }
 
 void Jogador3d::para()
@@ -308,13 +290,11 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
 
     jogador_vy -= GRAVIDADE * (GLfloat)t_dif;
     jogador_pos.e[1] += jogador_vy * (GLfloat)t_dif;
-    jogador_arma_pos.e[1] = jogador_pos.y();
 
     /* Limite do pulo: 2x a altura do personagem em relação ao chão de onde pulou */
     GLfloat pulo_teto_y = jogador_y_inicio_pulo + PULO_ALTURA_MAXIMA;
     if (jogador_pos.y() > pulo_teto_y) {
         jogador_pos.e[1] = pulo_teto_y;
-        jogador_arma_pos.e[1] = pulo_teto_y;
         jogador_vy = 0.f;
         jogador_estado_atual = CAINDO;
         jogador_modelo.drawInit(CAINDO);
@@ -325,7 +305,6 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
     GLfloat teto_max_y = TETO_ARENA_ALTURA - JOGADOR_ALTURA;
     if (jogador_pos.y() > teto_max_y) {
         jogador_pos.e[1] = teto_max_y;
-        jogador_arma_pos.e[1] = teto_max_y;
         jogador_vy = 0.f;
         jogador_estado_atual = CAINDO;
         jogador_modelo.drawInit(CAINDO);
@@ -334,7 +313,6 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
 
     if (jogador_vy <= 0.f && jogador_pos.y() <= ground + 1e-2f) {
         jogador_pos.e[1] = ground;
-        jogador_arma_pos.e[1] = ground;
         jogador_vy = 0.f;
         if(jogador_estado_atual != ATACANDO)
             jogador_estado_atual = PARADO;
@@ -355,8 +333,6 @@ void Jogador3d::set_pos_xz(GLfloat x, GLfloat z)
 {
     jogador_pos.e[0] = x;
     jogador_pos.e[2] = z;
-    jogador_arma_pos.e[0] = x;
-    jogador_arma_pos.e[2] = z;
 }
 
 void Jogador3d::set_posicao_e_rotacao(vec3 pos, GLfloat theta_graus)
@@ -366,7 +342,8 @@ void Jogador3d::set_posicao_e_rotacao(vec3 pos, GLfloat theta_graus)
     jogador_pos.e[2] = pos.z();
     jogador_theta = theta_graus;
     jogador_dir = rotacao3Dy(jogador_theta, vec3(0, 0, 1));
-    jogador_arma_pos = jogador_pos;
+
+    tiros.clear();
 }
 
 void Jogador3d::gira_arma(GLfloat theta_dif, GLfloat phi_dif)
@@ -378,6 +355,9 @@ void Jogador3d::gira_arma(GLfloat theta_dif, GLfloat phi_dif)
     jogador_arma_phi += phi_dif;
     if (jogador_arma_phi > 45) jogador_arma_phi = 45;
     if (jogador_arma_phi < -45) jogador_arma_phi = -45;
+
+  
+
 }
 
 void Jogador3d::atira()
@@ -386,25 +366,25 @@ void Jogador3d::atira()
         jogador_estado_atual = ATACANDO;
 
     // Base
-    vec3 tiro_braco_base = vec3(COORD_MAO_JOGADOR);
-    tiro_braco_base = rotacao3Dy(jogador_theta, tiro_braco_base);
-    tiro_braco_base = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_braco_base);
+    vec3 tiro_arma_base = vec3(jogador_arma_pos);
+    tiro_arma_base = rotacao3Dy(jogador_theta, tiro_arma_base);
+    tiro_arma_base = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_arma_base);
     
-    vec3 tiro_braco_topo = vec3(0,0,15);
-    tiro_braco_topo = rotacao3Dy(jogador_arma_tetha, tiro_braco_topo);
-    tiro_braco_topo = rotacao3Dx(jogador_arma_phi, tiro_braco_topo);
-    tiro_braco_topo = translacao3D(COORD_MAO_JOGADOR.x(), COORD_MAO_JOGADOR.y(), COORD_MAO_JOGADOR.z(), tiro_braco_topo);
+    vec3 tiro_arma_topo = vec3(0,0,jogador_arma_tamanho);
+    tiro_arma_topo = rotacao3Dy(jogador_arma_tetha, tiro_arma_topo);
+    tiro_arma_topo = rotacao3Dx(jogador_arma_phi, tiro_arma_topo);
+    tiro_arma_topo = translacao3D(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z(), tiro_arma_topo);
     
-    tiro_braco_topo = rotacao3Dy(jogador_theta, tiro_braco_topo);
-    tiro_braco_topo = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_braco_topo);
+    tiro_arma_topo = rotacao3Dy(jogador_theta, tiro_arma_topo);
+    tiro_arma_topo = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), tiro_arma_topo);
     
     // diff para dir
-    vec3 tiro_dir = tiro_braco_topo - tiro_braco_base;
+    vec3 tiro_dir = tiro_arma_topo - tiro_arma_base;
     tiro_dir = tiro_dir / tiro_dir.length();
     // adiciona
     tiros.push_back( 
                     new Tiro3d(
-                    tiro_braco_topo, 
+                    tiro_arma_topo, 
                     tiro_dir, 
                     jogador_tiro_raio, 
                     jogador_tiro_cor, 
@@ -446,8 +426,6 @@ void Jogador3d::aplica_colisao_arena(vec3 centro_arena, GLfloat raio_arena)
         GLfloat f = limite / d;
         jogador_pos.e[0] = centro_arena.x() + (jogador_pos.x() - centro_arena.x()) * f;
         jogador_pos.e[2] = centro_arena.z() + (jogador_pos.z() - centro_arena.z()) * f;
-        jogador_arma_pos.e[0] = jogador_pos.x();
-        jogador_arma_pos.e[2] = jogador_pos.z();
     }
 }
 
@@ -467,8 +445,6 @@ void Jogador3d::aplica_colisao_obstaculos(const std::list<Obstaculo3d>& obstacul
             GLfloat f = soma_raios / d;
             jogador_pos.e[0] = o.pos().x() + (jogador_pos.x() - o.pos().x()) * f;
             jogador_pos.e[2] = o.pos().z() + (jogador_pos.z() - o.pos().z()) * f;
-            jogador_arma_pos.e[0] = jogador_pos.x();
-            jogador_arma_pos.e[2] = jogador_pos.z();
         }
     }
 }
@@ -493,8 +469,6 @@ void Jogador3d::aplica_colisao_inimigo(Jogador3d& outro)
     GLfloat metade = overlap * 0.5f;
     jogador_pos.e[0] += dx * metade;
     jogador_pos.e[2] += dz * metade;
-    jogador_arma_pos.e[0] = jogador_pos.x();
-    jogador_arma_pos.e[2] = jogador_pos.z();
     outro.set_pos_xz(
         outro.pos().x() - dx * metade,
         outro.pos().z() - dz * metade
@@ -516,4 +490,57 @@ void Jogador3d::dano()
         else
             jogador_estado_atual = PERDER;
     }
+}
+
+
+void Jogador3d::posiciona_camera_arma()
+{
+    //glTranslatef(jogador_pos.x(), jogador_pos.y(), jogador_pos.z());
+    //glTranslatef(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z());
+     //+7.5f
+    glMatrixMode (GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective (45, (GLfloat)VIEWPORT_LARGURA/(GLfloat)VIEWPORT_DOWN_ALTURA, 1, 1000);
+    glMatrixMode(GL_MODELVIEW);
+
+    vec3 arma_base = vec3(jogador_arma_pos) + vec3(0, 1.5f, 0);
+    arma_base = rotacao3Dy(jogador_theta, arma_base);
+    arma_base = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), arma_base);
+
+    vec3 arma_topo = vec3(0,0,jogador_arma_tamanho) + vec3(0, 1.55f, 0);;
+    arma_topo = rotacao3Dy(jogador_arma_tetha, arma_topo);
+    arma_topo = rotacao3Dx(jogador_arma_phi, arma_topo);
+    arma_topo = translacao3D(jogador_arma_pos.x(), jogador_arma_pos.y(), jogador_arma_pos.z(), arma_topo);
+    
+    arma_topo = rotacao3Dy(jogador_theta, arma_topo);
+    arma_topo = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), arma_topo);
+
+   
+    
+    vec3 dir_arma = (arma_topo - arma_base) / (arma_topo - arma_base).length();
+
+    vec3 arma_meio = arma_base + (jogador_arma_tamanho/2)*dir_arma;
+
+    
+    gluLookAt(arma_base.x(), arma_base.y(), arma_base.z(), arma_topo.x(), arma_topo.y(), arma_topo.z(), 0.f, 1.f, 0.f);
+}
+
+void Jogador3d::posiciona_camera_olho()
+{   
+    glMatrixMode (GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective (75, (GLfloat)VIEWPORT_LARGURA/(GLfloat)VIEWPORT_UP_ALTURA, 1, 1000);
+    glMatrixMode(GL_MODELVIEW);
+
+    vec3 o = vec3(0,0,0);
+    o = translacao3D(0, jogador_altura*0.9f, jogador_raio*0.9f, o);
+    o = rotacao3Dy(jogador_theta, o);
+    o = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), o);
+
+    vec3 f = vec3(0,0,0);
+    f = translacao3D(0, jogador_altura*0.9f, jogador_raio, f);
+    f = rotacao3Dy(jogador_theta, f);
+    f = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), f);
+
+    gluLookAt(o.x(), o.y(), o.z(), f.x(), f.y(), f.z(), 0.f, 1.f, 0.f);
 }
