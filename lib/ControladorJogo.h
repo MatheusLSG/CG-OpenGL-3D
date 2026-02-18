@@ -60,9 +60,11 @@ public:
         if (jEsq.vidas() <= 0) {
             estado = GAME_OVER;
             vencedor = 2;
+            jDir.ganha();   /* Draco ganha: animação de vitória */
         } else if (jDir.vidas() <= 0) {
             estado = GAME_OVER;
             vencedor = 1;
+            jEsq.ganha();   /* Harry ganha: animação de vitória */
         }
     }
 

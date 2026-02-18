@@ -302,6 +302,16 @@ void Jogador3d::set_pos_xz(GLfloat x, GLfloat z)
     jogador_arma_pos.e[2] = z;
 }
 
+void Jogador3d::set_posicao_e_rotacao(vec3 pos, GLfloat theta_graus)
+{
+    jogador_pos.e[0] = pos.x();
+    jogador_pos.e[1] = 0.f;
+    jogador_pos.e[2] = pos.z();
+    Jogador_theta = theta_graus;
+    jogador_dir = rotacao3Dy(Jogador_theta, vec3(0, 0, 1));
+    jogador_arma_pos = jogador_pos;
+}
+
 void Jogador3d::gira_arma(GLfloat theta_dif, GLfloat phi_dif)
 {
 

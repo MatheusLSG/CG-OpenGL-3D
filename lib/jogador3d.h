@@ -89,6 +89,12 @@ public:
     /** @brief Ajusta a posição no plano XZ (usado pela resolução de colisões). */
     void set_pos_xz(GLfloat x, GLfloat z);
 
+    /**
+     * @brief Define posição (y=0) e rotação do corpo (ângulo em graus no plano XZ).
+     * Usado no reset para recolocar o jogador na posição inicial encarando o inimigo.
+     */
+    void set_posicao_e_rotacao(vec3 pos, GLfloat theta_graus);
+
     std::list<Tiro*>& retorna_tiros() { return tiros; }
 
     /**

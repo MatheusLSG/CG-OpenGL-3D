@@ -596,6 +596,8 @@ void keyUp(unsigned char key, int x, int y)
         teclas[key] = 0;
     if ((unsigned int)key == 0xE7)
         teclas[0xE7] = 0;
+    if ((unsigned int)key == 0xC7)  /* Ç maiúsculo */
+        teclas[0xC7] = 0;
     if (key == 'x') {
         jHarry.pula_soltar();
         pulo_tecla_liberada_harry = true;  /* só libera para próximo pulo quando realmente soltou */
@@ -670,11 +672,26 @@ void keyPress(unsigned char key, int x, int y)
         zoom--;
          break;
     case 'r':
-    case 'R':
+    case 'R': {
+        GLfloat hx, hz, dx, dz;
+        if (dadosArenaSVG.ok) {
+            hx = (GLfloat)dadosArenaSVG.harry_x;
+            hz = (GLfloat)dadosArenaSVG.harry_z;
+            dx = (GLfloat)dadosArenaSVG.draco_x;
+            dz = (GLfloat)dadosArenaSVG.draco_z;
+        } else {
+            hx = 0.f; hz = 200.f;
+            dx = 0.f; dz = 0.f;
+        }
+        GLfloat theta_harry = (GLfloat)(atan2((double)(dx - hx), (double)(dz - hz)) * 180.0 / M_PI);
+        GLfloat theta_draco = (GLfloat)(atan2((double)(hx - dx), (double)(hz - dz)) * 180.0 / M_PI);
+        jHarry.set_posicao_e_rotacao(vec3(hx, 0.f, hz), theta_harry);
+        jDraco.set_posicao_e_rotacao(vec3(dx, 0.f, dz), theta_draco);
         controladorJogo.resetarJogo();
         pulo_tecla_liberada_harry = true;
         pulo_tecla_liberada_draco = true;
         break;
+    }
     case 27 :
          exit(0);
     }
@@ -714,17 +731,17 @@ void idle()
     GLdouble timeDiference = currentTimeElapsed - previousTime;
     previousTime = currentTimeElapsed;
 
-    /* Movimento: estado a partir das teclas */
-    if (teclas['w'])
+    /* Movimento: estado a partir das teclas (minúscula e maiúscula) */
+    if (teclas['w'] || teclas['W'])
         jHarry.move(1);
-    else if (teclas['s'])
+    else if (teclas['s'] || teclas['S'])
         jHarry.move(-1);
     else
         jHarry.para();
 
-    if (teclas['o'])
+    if (teclas['o'] || teclas['O'])
         jDraco.move(1);
-    else if (teclas['l'])
+    else if (teclas['l'] || teclas['L'])
         jDraco.move(-1);
     else
         jDraco.para();
@@ -747,15 +764,29 @@ void idle()
     jHarry.gravidade((GLfloat)segundos, obstaculos, &jDraco);
     jDraco.gravidade((GLfloat)segundos, obstaculos, &jHarry);
 
-    /* Rotação apenas no chão (no ar só frente/trás) */
-    if (teclas['a'] && !jHarry.esta_no_ar())
-        jHarry.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
-    if (teclas['d'] && !jHarry.esta_no_ar())
+    /* Rotação apenas no chão (no ar só frente/trás); minúscula e maiúscula */
+    if ((teclas['a'] || teclas['A']) && !jHarry.esta_no_ar())
         jHarry.gira_corpo((GLfloat)(JOGADOR_VEL_ANGULAR * segundos));
-    if (teclas['k'] && !jDraco.esta_no_ar())
-        jDraco.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
-    if (teclas[0xE7] && !jDraco.esta_no_ar())
+    if ((teclas['d'] || teclas['D']) && !jHarry.esta_no_ar())
+        jHarry.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
+    if ((teclas['k'] || teclas['K']) && !jDraco.esta_no_ar())
         jDraco.gira_corpo((GLfloat)(JOGADOR_VEL_ANGULAR * segundos));
+    if ((teclas[0xE7] || teclas[0xC7]) && !jDraco.esta_no_ar())  /* Ç minúsculo (0xE7) e maiúsculo (0xC7) */
+        jDraco.gira_corpo((GLfloat)(-JOGADOR_VEL_ANGULAR * segundos));
+
+    /* --- TIROS: quando você implementar a atualização dos tiros e a colisão com o inimigo,
+         copie e cole o código abaixo dentro do if que confirma que um tiro acertou. --- */
+    /*
+    int vidasAntes = inimigo.vidas();
+    inimigo.dano();
+    if (&inimigo == &jHarry)
+        placar.notificarDanoEsquerda(vidasAntes);
+    else
+        placar.notificarDanoDireita(vidasAntes);
+    delete *it;
+    tiros_aliado.erase(it);
+    break;
+    */
 
     currentTime = (int)currentTimeElapsed;
     int fatorTempo = 33;
