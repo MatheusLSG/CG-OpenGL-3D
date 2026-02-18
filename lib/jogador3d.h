@@ -114,8 +114,8 @@ public:
      */
     void atualiza_animacao();
     /** @brief Desenha o modelo do jogador na posição e rotação atuais. */
-    void desenha_arma(int flag_ligar_luz);
-    void desenha_jogador(int flag_ligar_luz);
+    void desenha_arma();
+    void desenha_jogador();
     /** @brief Desenha os tiros ativos do jogador. */
     void desenha_tiros();
     /**
@@ -157,6 +157,8 @@ public:
     void aplica_colisao_obstaculos(const std::list<Obstaculo3d>& obstaculos);
     /** @brief Separa este jogador e o outro (repulsor mútuo). */
     void aplica_colisao_inimigo(Jogador3d& outro);
+    
+    void aplica_laterna(int flag_ligar_luz);
 
     /**
      * @brief Reduz uma vida do jogador. O placar deve ser notificado em seguida.

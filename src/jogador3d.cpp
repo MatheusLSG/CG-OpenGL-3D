@@ -151,7 +151,7 @@ void Jogador3d::atualiza_animacao()
     }
 }
 
-void Jogador3d::desenha_arma(int flag_ligar_luz)
+void Jogador3d::desenha_arma()
 {
     GLfloat escala_altura = jogador_altura / (GLfloat)JOGADOR_ALTURA;
     /* Espessura da varinha em relação ao raio do personagem; fator < 1 deixa mais fina */
@@ -171,28 +171,13 @@ void Jogador3d::desenha_arma(int flag_ligar_luz)
         glMaterialfv(GL_FRONT, GL_SPECULAR, preto);
         glMaterialf(GL_FRONT, GL_SHININESS, 0.0f);
         glColor3f(0.45f, 0.25f, 0.14f);
-        glTranslatef(0,0, escala_altura * jogador_arma_tamanho);
-        if (flag_ligar_luz)
-        {
-            glEnable(GL_LIGHTING);
-            glEnable(jogador_luz);
-            GLfloat zero[] = {0.0f, 0.0f, 0.0f, 1.0f};
-            glLightfv(jogador_luz, GL_POSITION, zero);
-
-            GLfloat direcao_foco[] = {jogador_arma_dir.x(), jogador_arma_dir.y(), jogador_arma_dir.z(), 0.0f};
-            glLightfv(jogador_luz, GL_SPOT_DIRECTION, direcao_foco);
-        }
-        else
-        {
-            glDisable(jogador_luz);
-        }
-        glTranslatef(0,0, -escala_altura * jogador_arma_tamanho/2);
+        glTranslatef(0,0, escala_altura * jogador_arma_tamanho/2);
         glScalef(espessura_varinha, espessura_varinha, escala_altura * jogador_arma_tamanho);
         glutSolidCube(1);
     glPopMatrix();
 }
 
-void Jogador3d::desenha_jogador(int flag_ligar_luz)
+void Jogador3d::desenha_jogador()
 {
     glPushMatrix();
         glCullFace(GL_BACK);
@@ -207,8 +192,9 @@ void Jogador3d::desenha_jogador(int flag_ligar_luz)
         jogador_modelo.drawCurrent();
 
     glPopMatrix();
-
-    desenha_arma(flag_ligar_luz);
+    glPushMatrix();
+        desenha_arma();
+    glPopMatrix();
 }
 
 
@@ -564,4 +550,60 @@ void Jogador3d::posiciona_camera_olho()
     f = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), f);
 
     gluLookAt(o.x(), o.y(), o.z(), f.x(), f.y(), f.z(), 0.f, 1.f, 0.f);
+}
+
+void Jogador3d::aplica_laterna(int flag_ligar_luz)
+{
+    if (flag_ligar_luz)
+    {
+        glEnable(GL_LIGHTING);
+    
+        glEnable(jogador_luz);
+
+        GLfloat branco[] = {1,1,1,1};
+        
+        GLfloat escala_altura = jogador_altura / (GLfloat)JOGADOR_ALTURA;
+        vec3 arma_pos_esc = vec3(escala_altura * jogador_arma_pos.x(), escala_altura * jogador_arma_pos.y(), escala_altura * jogador_arma_pos.z());
+    
+      
+        GLfloat arma_tam_esc = escala_altura * jogador_arma_tamanho;
+
+        vec3 pos_lant = vec3(0, 0, arma_tam_esc);
+        pos_lant = rotacao3Dy(jogador_arma_tetha, pos_lant);
+        pos_lant = rotacao3Dx(jogador_arma_phi, pos_lant);
+        pos_lant = translacao3D(arma_pos_esc.x(), arma_pos_esc.y(), arma_pos_esc.z(), pos_lant);
+        pos_lant = rotacao3Dy(jogador_theta, pos_lant);
+        pos_lant = translacao3D(jogador_pos.x(), jogador_pos.y(), jogador_pos.z(), pos_lant);
+
+        GLfloat pos[] = {pos_lant.x(), pos_lant.y(), pos_lant.z(), 1.0};
+
+        glEnable(GL_LIGHTING);
+        glEnable(jogador_luz);
+        
+        glLightfv(jogador_luz, GL_POSITION, pos);
+
+        GLfloat direcao_foco[] = {100*jogador_arma_dir.x(), 100*jogador_arma_dir.y(), 100*jogador_arma_dir.z(), 1.0f};
+        glLightfv(jogador_luz, GL_SPOT_DIRECTION, direcao_foco);
+
+        GLfloat espessura_varinha = (jogador_raio / (GLfloat)JOGADOR_RAIO) * 0.65f;
+        
+        glPushMatrix();
+            glCullFace(GL_FRONT);
+            glTranslatef(pos_lant.x(), pos_lant.y(), pos_lant.z());
+            GLfloat emiss[4] = { 0.7f, 0.75f, 1.f, 1.f };
+            GLfloat amb[4]   = { 0.2f, 0.2f, 0.3f, 1.f };
+            glMaterialfv(GL_FRONT, GL_EMISSION, emiss);
+            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, amb);
+            glMaterialfv(GL_FRONT, GL_SPECULAR, emiss);
+            glColor3f(0.9f, 0.9f, 1.f);
+            glutSolidSphere(espessura_varinha, 16, 16);
+            GLfloat zero[4] = { 0.f, 0.f, 0.f, 1.f };
+            glMaterialfv(GL_FRONT, GL_EMISSION, zero);
+        glPopMatrix();
+        
+    }
+    else
+    {
+        glDisable(jogador_luz);
+    }
 }

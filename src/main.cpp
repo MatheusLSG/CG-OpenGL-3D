@@ -282,7 +282,7 @@ void inicializacao ()
         draco
     );
 
-    GLfloat verde[] = {0.5f, 1.0f, 0.5f, 1.0f};
+    GLfloat verde[] = {0.2f, 1.0f, 0.2f, 1.0f};
     configura_lanterna(GL_LIGHT2, verde, verde);
 
     // HARRY ----------------------------------------------------------------
@@ -485,7 +485,7 @@ void DrawAxes(double size)
 }
 
 void desenhaMundo(int flag_harry, int flag_draco){
-    pomoDeOuro.aplicarLuz();
+    //pomoDeOuro.aplicarLuz();
 
     desenhaChaoAzul();
     for (Obstaculo3d& o : obstaculos)
@@ -496,8 +496,8 @@ void desenhaMundo(int flag_harry, int flag_draco){
     
     glEnable(GL_ALPHA_TEST);
         glAlphaFunc(GL_GREATER, 0.5f);
-        if(flag_harry) jHarry.desenha_jogador(flag_lanterna);
-        if(flag_draco) jDraco.desenha_jogador(flag_lanterna);
+        if(flag_harry) jHarry.desenha_jogador();
+        if(flag_draco) jDraco.desenha_jogador();
         jHarry.desenha_tiros();
         jDraco.desenha_tiros();
 
@@ -510,31 +510,35 @@ void desenhaJogo(){
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_CULL_FACE);
     glPushMatrix();
-        // Translada para o centro do personagem para facilitar a rotacao da camera
-        glTranslatef(0,-40,0);
         pomoDeOuro.atualizar(&dadosArenaSVG, OBSTACULO_ALTURA_MULTIPLICADOR * jogador_altura_global);
         forcar_zero_emissao = !pomoDeOuro.estaAtivo();
         if (!pomoDeOuro.estaAtivo()) {
-            //GLfloat zero[4] = { 0.f, 0.f, 0.f, 1.f };
-            //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
-            //for (int i = 0; i < 8; i++) glDisable((GLenum)(GL_LIGHT0 + i));
+            GLfloat zero[4] = { .1f, 0.1f, 0.1f, 1.f };
+            glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
+            for (int i = 0; i < 8; i++) glDisable((GLenum)(GL_LIGHT0 + i));
         }
 
         glLoadIdentity();
-
         // Viewport Harry: câmera acompanha Harry (olhar fixo no personagem, sem girar com ele)
         glViewport(0, 0, VIEWPORT_LARGURA, VIEWPORT_DOWN_ALTURA);
         glPushMatrix();
+
             if (flag_perspectiva)
             {
                 camera_terceira_pessoa_harry();
+                pomoDeOuro.aplicarLuz();
+                jHarry.aplica_laterna(flag_lanterna);
+                jDraco.aplica_laterna(flag_lanterna);
                 desenhaMundo(1,1);        
             }
             else
             {
                 jHarry.posiciona_camera_arma();
+                pomoDeOuro.aplicarLuz();
+                jHarry.aplica_laterna(flag_lanterna);
+                jDraco.aplica_laterna(flag_lanterna);
                 desenhaMundo(0,1);
-                jHarry.desenha_arma(flag_lanterna);
+                jHarry.desenha_arma();
             }
 
 
@@ -545,14 +549,20 @@ void desenhaJogo(){
         glPushMatrix();
             if (flag_perspectiva)
             {
-                camera_terceira_pessoa_draco();   
+                camera_terceira_pessoa_draco();  
+                pomoDeOuro.aplicarLuz(); 
+                jHarry.aplica_laterna(flag_lanterna);
+                jDraco.aplica_laterna(flag_lanterna);
                 desenhaMundo(1,1);     
             }
             else
             {
                 jDraco.posiciona_camera_arma();
+                pomoDeOuro.aplicarLuz();
+                jHarry.aplica_laterna(flag_lanterna);
+                jDraco.aplica_laterna(flag_lanterna);
                 desenhaMundo(1,0);
-                jDraco.desenha_arma(flag_lanterna);
+                jDraco.desenha_arma();
             }
 
 
@@ -562,6 +572,9 @@ void desenhaJogo(){
         glViewport(0, VIEWPORT_DOWN_ALTURA, VIEWPORT_LARGURA, VIEWPORT_UP_ALTURA);
         glPushMatrix();
             jHarry.posiciona_camera_olho();
+            pomoDeOuro.aplicarLuz();
+            jHarry.aplica_laterna(flag_lanterna);
+            jDraco.aplica_laterna(flag_lanterna);
 
             desenhaMundo(1,1);
 
@@ -572,6 +585,9 @@ void desenhaJogo(){
         glViewport(VIEWPORT_LARGURA, VIEWPORT_DOWN_ALTURA, VIEWPORT_LARGURA, VIEWPORT_UP_ALTURA);
         glPushMatrix();
             jDraco.posiciona_camera_olho();
+            pomoDeOuro.aplicarLuz();
+            jHarry.aplica_laterna(flag_lanterna);
+            jDraco.aplica_laterna(flag_lanterna);
 
             desenhaMundo(1,1);
 
@@ -683,7 +699,7 @@ void keyPress(unsigned char key, int x, int y)
     case 'n':
     case 'N':
         pomoDeOuro.alternarAtivo();    
-        flag_lanterna = 1;
+        flag_lanterna = !flag_lanterna;
         break;
     case 'c':
         coordsysToggle = !coordsysToggle;
@@ -917,7 +933,7 @@ void camera_terceira_pessoa_draco()
 
 void camera_terceira_pessoa_harry()
 {
-     glMatrixMode (GL_PROJECTION);
+    glMatrixMode (GL_PROJECTION);
         glLoadIdentity();
         gluPerspective (45, (GLfloat)VIEWPORT_LARGURA/(GLfloat)VIEWPORT_DOWN_ALTURA, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
@@ -982,17 +998,17 @@ void configura_lanterna(int luz, GLfloat luz_difusa[4], GLfloat luz_especular[4]
     
     glEnable(luz);
 
+
     glLightfv(luz, GL_DIFFUSE, luz_difusa);
     glLightfv(luz, GL_SPECULAR, luz_especular);
 
-    glLightf(luz, GL_SPOT_CUTOFF, 45.0f);
+    glLightf(luz, GL_SPOT_CUTOFF, 60.0f);
 
-    glLightf(luz, GL_SPOT_EXPONENT, 50.0f); 
+    glLightf(luz, GL_SPOT_EXPONENT, 10.0f); 
     
-    glLightf(luz, GL_CONSTANT_ATTENUATION, 1.0f);
-    glLightf(luz, GL_LINEAR_ATTENUATION, 0.05f);
-    glLightf(luz, GL_QUADRATIC_ATTENUATION, 0.001f);
-
-    glDisable(luz);
+    glLightf(luz, GL_CONSTANT_ATTENUATION, 0.00001f);
+    glLightf(luz, GL_LINEAR_ATTENUATION, 0.0001f);
+    glLightf(luz, GL_QUADRATIC_ATTENUATION, 0.00001f);
+    //glDisable(luz);
 }
 
