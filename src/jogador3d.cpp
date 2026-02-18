@@ -41,7 +41,7 @@ void Jogador3d::atualiza_animacao()
         return;
     }
     
-    if (aux && jogador_anim_atual != PERDER)
+    if (aux && jogador_anim_atual != PERDER && jogador_anim_atual != PULANDO)
     {
         jogador_modelo.drawInit(PARADO);  
     }
@@ -51,7 +51,12 @@ void Jogador3d::atualiza_animacao()
         jogador_flag_anim = 0;
         return;
     }
-    
+
+    if (aux && jogador_estado_atual == PULANDO)
+    {
+        jogador_flag_anim = 0;
+        return;
+    }
 
     
     
@@ -250,12 +255,14 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
     if (!esta_no_ar()) {
         if (jogador_pos.y() > ground + 1e-3f) {
             jogador_estado_atual = CAINDO;
+            jogador_modelo.drawInit(CAINDO);
+            jogador_flag_anim = 1;
             jogador_vy = 0.f;
         } else {
             return;
         }
     }
-
+    
     jogador_vy -= GRAVIDADE * (GLfloat)t_dif;
     jogador_pos.e[1] += jogador_vy * (GLfloat)t_dif;
     jogador_arma_pos.e[1] = jogador_pos.y();
@@ -267,6 +274,8 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
         jogador_arma_pos.e[1] = pulo_teto_y;
         jogador_vy = 0.f;
         jogador_estado_atual = CAINDO;
+        jogador_modelo.drawInit(CAINDO);
+        jogador_flag_anim = 1;
     }
 
     /* Teto da arena: cabeça (y + JOGADOR_ALTURA) não pode passar do teto (4x altura do personagem) */
@@ -276,6 +285,8 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
         jogador_arma_pos.e[1] = teto_max_y;
         jogador_vy = 0.f;
         jogador_estado_atual = CAINDO;
+        jogador_modelo.drawInit(CAINDO);
+        jogador_flag_anim = 1;
     }
 
     if (jogador_vy <= 0.f && jogador_pos.y() <= ground + 1e-2f) {
@@ -285,6 +296,8 @@ void Jogador3d::gravidade(GLfloat t_dif, const std::list<Obstaculo3d>& obstaculo
         jogador_estado_atual = PARADO;
     } else if (jogador_vy < 0.f && jogador_estado_atual == PULANDO) {
         jogador_estado_atual = CAINDO;
+        jogador_modelo.drawInit(CAINDO);
+        jogador_flag_anim = 1;
     }
 }
 
